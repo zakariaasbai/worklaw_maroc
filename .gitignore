@@ -47,3 +47,6 @@ app.*.map.json
 # Environment configuration (Supabase URL/anon key per environment).
 # Copy env.example.json to env.json and fill in real values — never commit env.json.
 env.json
+# Supabase local temporary files
+supabase/.temp/
+supabase/.branches/
