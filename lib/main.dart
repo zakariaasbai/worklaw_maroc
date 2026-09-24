@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+import 'core/config/env.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Env.assertConfigured();
+  await Supabase.initialize(
+    url: Env.supabaseUrl,
+    publishableKey: Env.supabaseAnonKey,
+  );
   runApp(const ProviderScope(child: WorkLawMarocApp()));
 }
 
