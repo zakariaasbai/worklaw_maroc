@@ -37,7 +37,7 @@ row_count() {
 }
 
 # --- Test 1: happy path creates profile + organization + owner membership ---
-EMAIL_OK="trigger-test-ok-$(date +%s)@example.com"
+EMAIL_OK="trigger-test-ok-$(date +%s)@test.local"
 STATUS=$(signup "$EMAIL_OK" "Jane Doe" "Acme SARL")
 [ "$STATUS" = "200" ] || fail "happy path signup returned HTTP $STATUS (expected 200): $(cat /tmp/handle_new_user_test_response.json)"
 
@@ -55,7 +55,7 @@ MEMBER_COUNT=$(row_count "
 pass "happy path creates profile + organization + owner membership"
 
 # --- Test 2: missing organization_name must reject signup, no orphan rows ---
-EMAIL_BAD="trigger-test-bad-$(date +%s)@example.com"
+EMAIL_BAD="trigger-test-bad-$(date +%s)@test.local"
 STATUS=$(signup "$EMAIL_BAD" "John Doe" "")
 [ "$STATUS" != "200" ] || fail "signup with empty organization_name should have failed, got HTTP 200"
 

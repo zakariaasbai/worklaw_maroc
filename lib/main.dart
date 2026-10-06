@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/config/env.dart';
+import 'core/routing/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,24 +20,12 @@ class WorkLawMarocApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'WorkLaw Maroc',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const _PlaceholderHomePage(),
-    );
-  }
-}
-
-class _PlaceholderHomePage extends StatelessWidget {
-  const _PlaceholderHomePage();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('WorkLaw Maroc')),
-      body: const Center(child: Text('WorkLaw Maroc — MVP en construction')),
+      routerConfig: appRouter,
     );
   }
 }
