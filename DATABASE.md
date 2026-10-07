@@ -119,3 +119,23 @@ Une configuration de lancement est déjà présente dans `.vscode/launch.json` (
 ```bash
 flutter run --dart-define-from-file=env.json
 ```
+
+## Auth — configuration requise côté dashboard Supabase (Milestone 4)
+
+Les emails de confirmation de compte et de réinitialisation de mot de passe contiennent un lien de retour vers l'app. Ce lien doit être whitelisté dans **Authentication → URL Configuration** sur le projet distant, sinon Supabase refuse la redirection.
+
+Pour le développement local en Flutter Web, fixez d'abord un port stable (le port change à chaque lancement sinon) :
+
+```bash
+flutter run -d chrome --web-port=5000 --dart-define-from-file=env.json
+```
+
+Puis configurez, dans **Authentication → URL Configuration** :
+
+- **Site URL** : `http://localhost:5000`
+- **Redirect URLs** (ajouter) :
+  - `http://localhost:5000/**`
+
+Le `**` couvre tous les chemins de l'app (`/login`, `/reset-password`, etc.) — Supabase supporte les wildcards dans cette liste. Si vous préférez être explicite plutôt que d'utiliser un wildcard, ajoutez individuellement `http://localhost:5000`, `http://localhost:5000/login` et `http://localhost:5000/reset-password`.
+
+**Confirm email** reste activé sur ce projet (vérifié dans le dashboard : activé, longueur minimale de mot de passe = 8 — c'est la valeur utilisée par la validation Flutter, voir `lib/features/auth/domain/auth_validators.dart`). Si cette config change côté dashboard, `supabaseMinPasswordLength` dans ce fichier doit être mis à jour en conséquence.

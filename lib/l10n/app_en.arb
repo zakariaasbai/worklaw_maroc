@@ -1,0 +1,57 @@
+{
+  "@@locale": "en",
+
+  "loginTitle": "Log in",
+  "signupTitle": "Create an account",
+  "forgotPasswordTitle": "Forgot password",
+  "resetPasswordTitle": "New password",
+
+  "fullNameLabel": "Full name",
+  "organizationNameLabel": "Company name",
+  "emailLabel": "Email",
+  "passwordLabel": "Password",
+  "confirmPasswordLabel": "Confirm password",
+  "newPasswordLabel": "New password",
+  "confirmNewPasswordLabel": "Confirm new password",
+
+  "signupSubmit": "Create account",
+  "loginSubmit": "Log in",
+  "forgotPasswordSubmit": "Send reset link",
+  "resetPasswordSubmit": "Update password",
+
+  "goToLogin": "Already have an account? Log in",
+  "goToSignup": "No account yet? Create one",
+  "forgotPasswordLink": "Forgot password?",
+  "backToLogin": "Back to login",
+
+  "signupConfirmationSentMessage": "A confirmation email was sent to {email}. Click the link to activate your account.",
+  "@signupConfirmationSentMessage": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "forgotPasswordSuccessMessage": "If an account exists for this email, a reset link has been sent.",
+  "resetPasswordSuccessMessage": "Password updated. You can now log in.",
+
+  "signupGenericError": "Could not create the account — check the company name and your full name.",
+  "loginGenericError": "Incorrect email or password.",
+  "forgotPasswordGenericError": "Could not send the reset email. Please try again.",
+  "resetPasswordGenericError": "Could not update the password. The reset link may have expired.",
+
+  "validationRequired": "This field is required",
+  "validationInvalidEmail": "Invalid email",
+  "validationTooLong": "Must be {max} characters or fewer",
+  "@validationTooLong": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "validationPasswordTooShort": "Minimum {min} characters",
+  "@validationPasswordTooShort": {
+    "placeholders": { "min": { "type": "int" } }
+  },
+  "validationPasswordsDontMatch": "Passwords do not match",
+
+  "logoutButton": "Log out",
+
+  "languageSelectorLabel": "Language",
+  "languageFrench": "French",
+  "languageArabic": "Arabic",
+  "languageEnglish": "English"
+}

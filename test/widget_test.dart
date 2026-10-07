@@ -1,14 +1,26 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:worklaw_maroc/features/auth/application/auth_providers.dart';
 import 'package:worklaw_maroc/main.dart';
 
-void main() {
-  testWidgets('App boots and shows placeholder home page', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(const WorkLawMarocApp());
+import 'helpers/fake_auth_repository.dart';
 
-    expect(find.text('WorkLaw Maroc'), findsWidgets);
-    expect(find.text('WorkLaw Maroc — MVP en construction'), findsOneWidget);
-  });
+void main() {
+  testWidgets(
+    'App boots without a session and redirects to the login screen',
+    (WidgetTester tester) async {
+      final fake = FakeAuthRepository();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [authRepositoryProvider.overrideWithValue(fake)],
+          child: const WorkLawMarocApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Connexion'), findsWidgets);
+    },
+  );
 }

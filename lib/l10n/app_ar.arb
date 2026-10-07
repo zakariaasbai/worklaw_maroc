@@ -1,0 +1,57 @@
+{
+  "@@locale": "ar",
+
+  "loginTitle": "تسجيل الدخول",
+  "signupTitle": "إنشاء حساب",
+  "forgotPasswordTitle": "نسيت كلمة المرور",
+  "resetPasswordTitle": "كلمة مرور جديدة",
+
+  "fullNameLabel": "الاسم الكامل",
+  "organizationNameLabel": "اسم الشركة",
+  "emailLabel": "البريد الإلكتروني",
+  "passwordLabel": "كلمة المرور",
+  "confirmPasswordLabel": "تأكيد كلمة المرور",
+  "newPasswordLabel": "كلمة مرور جديدة",
+  "confirmNewPasswordLabel": "تأكيد كلمة المرور الجديدة",
+
+  "signupSubmit": "إنشاء الحساب",
+  "loginSubmit": "تسجيل الدخول",
+  "forgotPasswordSubmit": "إرسال رابط إعادة التعيين",
+  "resetPasswordSubmit": "تحديث كلمة المرور",
+
+  "goToLogin": "لديك حساب بالفعل؟ تسجيل الدخول",
+  "goToSignup": "ليس لديك حساب؟ أنشئ واحداً",
+  "forgotPasswordLink": "نسيت كلمة المرور؟",
+  "backToLogin": "العودة إلى تسجيل الدخول",
+
+  "signupConfirmationSentMessage": "تم إرسال بريد إلكتروني للتأكيد إلى {email}. انقر على الرابط لتفعيل حسابك.",
+  "@signupConfirmationSentMessage": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "forgotPasswordSuccessMessage": "إذا كان هناك حساب مرتبط بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة التعيين.",
+  "resetPasswordSuccessMessage": "تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول.",
+
+  "signupGenericError": "تعذر إنشاء الحساب — تحقق من اسم الشركة واسمك الكامل.",
+  "loginGenericError": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+  "forgotPasswordGenericError": "تعذر إرسال بريد إعادة التعيين. حاول مرة أخرى.",
+  "resetPasswordGenericError": "تعذر تحديث كلمة المرور. قد يكون الرابط منتهي الصلاحية.",
+
+  "validationRequired": "حقل مطلوب",
+  "validationInvalidEmail": "بريد إلكتروني غير صالح",
+  "validationTooLong": "الحد الأقصى {max} حرفاً",
+  "@validationTooLong": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "validationPasswordTooShort": "الحد الأدنى {min} أحرف",
+  "@validationPasswordTooShort": {
+    "placeholders": { "min": { "type": "int" } }
+  },
+  "validationPasswordsDontMatch": "كلمتا المرور غير متطابقتين",
+
+  "logoutButton": "تسجيل الخروج",
+
+  "languageSelectorLabel": "اللغة",
+  "languageFrench": "الفرنسية",
+  "languageArabic": "العربية",
+  "languageEnglish": "الإنجليزية"
+}

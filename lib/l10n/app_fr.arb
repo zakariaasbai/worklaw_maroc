@@ -1,0 +1,57 @@
+{
+  "@@locale": "fr",
+
+  "loginTitle": "Connexion",
+  "signupTitle": "Créer un compte",
+  "forgotPasswordTitle": "Mot de passe oublié",
+  "resetPasswordTitle": "Nouveau mot de passe",
+
+  "fullNameLabel": "Nom complet",
+  "organizationNameLabel": "Nom de l'entreprise",
+  "emailLabel": "Email",
+  "passwordLabel": "Mot de passe",
+  "confirmPasswordLabel": "Confirmer le mot de passe",
+  "newPasswordLabel": "Nouveau mot de passe",
+  "confirmNewPasswordLabel": "Confirmer le nouveau mot de passe",
+
+  "signupSubmit": "Créer le compte",
+  "loginSubmit": "Se connecter",
+  "forgotPasswordSubmit": "Envoyer le lien de réinitialisation",
+  "resetPasswordSubmit": "Mettre à jour le mot de passe",
+
+  "goToLogin": "Déjà un compte ? Se connecter",
+  "goToSignup": "Pas encore de compte ? En créer un",
+  "forgotPasswordLink": "Mot de passe oublié ?",
+  "backToLogin": "Retour à la connexion",
+
+  "signupConfirmationSentMessage": "Un email de confirmation a été envoyé à {email}. Cliquez sur le lien pour activer votre compte.",
+  "@signupConfirmationSentMessage": {
+    "placeholders": { "email": { "type": "String" } }
+  },
+  "forgotPasswordSuccessMessage": "Si un compte existe pour cet email, un lien de réinitialisation a été envoyé.",
+  "resetPasswordSuccessMessage": "Mot de passe mis à jour. Vous pouvez maintenant vous connecter.",
+
+  "signupGenericError": "Impossible de créer le compte — vérifiez le nom de l'entreprise et votre nom complet.",
+  "loginGenericError": "Email ou mot de passe incorrect.",
+  "forgotPasswordGenericError": "Impossible d'envoyer l'email de réinitialisation. Réessayez.",
+  "resetPasswordGenericError": "Impossible de mettre à jour le mot de passe. Le lien a peut-être expiré.",
+
+  "validationRequired": "Champ obligatoire",
+  "validationInvalidEmail": "Email invalide",
+  "validationTooLong": "{max} caractères maximum",
+  "@validationTooLong": {
+    "placeholders": { "max": { "type": "int" } }
+  },
+  "validationPasswordTooShort": "{min} caractères minimum",
+  "@validationPasswordTooShort": {
+    "placeholders": { "min": { "type": "int" } }
+  },
+  "validationPasswordsDontMatch": "Les mots de passe ne correspondent pas",
+
+  "logoutButton": "Déconnexion",
+
+  "languageSelectorLabel": "Langue",
+  "languageFrench": "Français",
+  "languageArabic": "Arabe",
+  "languageEnglish": "Anglais"
+}
