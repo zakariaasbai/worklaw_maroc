@@ -27,6 +27,7 @@ npx supabase db reset
 |---|---|
 | `supabase/migrations/20260917120000_create_organizations_schema.sql` | Milestone 2 : `profiles`, `organizations`, `organization_members`, trigger `handle_new_user`, RLS de base |
 | `supabase/migrations/20260929120000_employees_schema.sql` | Milestone 3 : `contract_types`, `employees`, `employee_sensitive_data`, RLS (dont accès salaire/CNSS/CIN réservé owner/admin) |
+| `supabase/migrations/20261105120000_legal_rules_schema.sql` | Milestone 5 Partie B : `legal_sources`, `legal_rules` (versionnée, garde-fous DB), vue `legal_rules_active`, fonction `get_applicable_rule()`, `calculation_runs` / `calculation_run_rules` (immuables). **Aucune règle ni source n'est seedée.** |
 
 Toute nouvelle migration se crée avec :
 
@@ -84,6 +85,26 @@ bash supabase/tests/employee_sensitive_data_role_test.sh
 - **`employee_sensitive_data_role_test.sh`** : vérifie que `employee_sensitive_data` (salaire, CNSS, CIN) n'est visible que par `owner`/`admin`, jamais par un `member`. La préparation (ajout du membre avec `role = 'member'`) passe par `SUPABASE_DB_URL` — connexion directe qui bypasse RLS, seul moyen de simuler ce rôle tant qu'il n'y a pas de flux d'invitation — mais la **vérification** passe entièrement par la clé anon + un vrai JWT obtenu en se connectant en tant que ce membre, exactement comme le ferait l'app Flutter. Si la vérification utilisait aussi la connexion directe, le test ne prouverait rien sur le comportement RLS réel.
 
 `supabase/tests/_helpers.sh` contient les fonctions communes (signup, signin, appels REST, parsing JSON minimal) réutilisées par ces trois scripts.
+
+## Règles légales (Milestone 5 Partie B) — comment une règle entre en base
+
+Il n'existe **aucune policy INSERT/UPDATE/DELETE côté client** sur `legal_sources` et `legal_rules` — volontairement. Il n'y a pas encore de rôle "staff interne" (`platform_staff` ou équivalent) distinct des rôles `owner/admin/member` qui sont des rôles *par organisation cliente*, pas des rôles internes à l'équipe WorkLaw.
+
+**En attendant ce rôle (prévu avec le futur panneau d'administration) :** toute règle ou source légale s'ajoute soit par une migration (`npx supabase migration new ...`), soit directement via le **SQL Editor** du dashboard Supabase — jamais depuis l'app. Les garde-fous (statut `DRAFT→...→ACTIVE`, immutabilité une fois `VERIFIED`/`ACTIVE`, non-chevauchement des périodes) sont au niveau base, donc ils s'appliquent même à ces insertions manuelles — il n'y a pas de "mode admin" qui les contourne, et c'est volontaire.
+
+## Tester les règles légales (Milestone 5 Partie B)
+
+Trois scripts, mêmes variables d'environnement que ci-dessus :
+
+```bash
+bash supabase/tests/legal_rules_constraints_test.sh
+bash supabase/tests/legal_rules_visibility_test.sh
+bash supabase/tests/calculation_runs_test.sh
+```
+
+- **`legal_rules_constraints_test.sh`** : chaque scénario tourne dans un `BEGIN`/`ROLLBACK` (rien n'est jamais commité) et vérifie, via la connexion directe : `legal_source_id` obligatoire à partir de `SOURCE_FOUND`, `verified_by`/`verified_at` obligatoires à partir de `VERIFIED`, `rule_definition` immuable une fois `VERIFIED`, deux périodes qui se chevauchent pour le même `rule_key` sont rejetées, et `get_applicable_rule()` retrouve bien la version qui était en vigueur à une date passée (pas la version actuelle).
+- **`legal_rules_visibility_test.sh`** : une ligne `DRAFT` et une ligne `ACTIVE` sont créées via `SUPABASE_DB_URL` (seul moyen, pas de policy d'écriture côté client) ; la vérification passe par la clé anon + un vrai JWT — seule la ligne `ACTIVE` est visible via l'API, `legal_sources` est lisible intégralement.
+- **`calculation_runs_test.sh`** : isolation multi-tenant sur `calculation_runs`/`calculation_run_rules` (même pattern que Milestone 3), puis vérifie qu'une tentative de `UPDATE` ou `DELETE` ne change rien — aucune des deux tables n'a de policy pour ces opérations, un calcul est un snapshot immuable.
 
 ## Arrêter Supabase local
 
