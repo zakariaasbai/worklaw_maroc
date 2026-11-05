@@ -53,5 +53,76 @@
   "languageSelectorLabel": "Langue",
   "languageFrench": "Français",
   "languageArabic": "Arabe",
-  "languageEnglish": "Anglais"
+  "languageEnglish": "Anglais",
+
+  "employeesListTitle": "Employés",
+  "employeesStatusActive": "Actifs",
+  "employeesStatusArchived": "Archivés",
+  "employeesAddTooltip": "Ajouter un employé",
+  "employeesLoadError": "Erreur de chargement : {error}",
+  "@employeesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeesEmpty": "Aucun employé.",
+
+  "employeeDetailTitle": "Fiche employé",
+  "employeeArchivedChip": "Archivé",
+  "employeeFieldEmployeeNumber": "Identifiant interne",
+  "employeeFieldPosition": "Poste",
+  "employeeFieldDepartment": "Département",
+  "employeeFieldHireDate": "Date d'embauche",
+  "employeeFieldContractType": "Type de contrat",
+  "employeeFieldEmploymentType": "Régime",
+  "employeeFieldPhone": "Téléphone",
+  "employeeFieldEmail": "Email",
+  "employeeFieldAddress": "Adresse",
+  "employeeFieldNationality": "Nationalité",
+  "employmentTypeFullTime": "Temps plein",
+  "employmentTypePartTime": "Temps partiel",
+  "employeeSensitiveSectionTitle": "Informations sensibles",
+  "employeeSensitiveHidden": "Non visible avec votre rôle, ou pas encore renseignées.",
+  "employeeSalaryMissing": "Salaire : non renseigné",
+  "employeeSalaryValue": "Salaire : {amount} {currency}",
+  "@employeeSalaryValue": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "currency": { "type": "String" }
+    }
+  },
+  "employeeSalaryMissingTooltip": "Ce champ conditionne les futurs calculateurs (préavis, indemnité, solde de tout compte).",
+  "employeeFieldCin": "CIN",
+  "employeeFieldCnss": "N° CNSS",
+  "employeeEditButton": "Modifier",
+  "employeeArchiveButton": "Archiver",
+  "employeeArchiveDialogTitle": "Archiver cet employé ?",
+  "employeeArchiveDialogContent": "L'employé restera consultable (historique des calculs), mais n'apparaîtra plus dans la liste active.",
+  "employeeArchiveDialogCancel": "Annuler",
+
+  "employeeFormTitleNew": "Nouvel employé",
+  "employeeFormTitleEdit": "Modifier employé",
+  "employeeGenericError": "Erreur : {error}",
+  "@employeeGenericError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmployeeNumberRequired": "Identifiant employé interne *",
+  "employeeFieldFirstName": "Prénom *",
+  "employeeFieldLastName": "Nom *",
+  "employeeFieldPositionRequired": "Poste *",
+  "employeeFieldHireDateRequired": "Date d'embauche *",
+  "employeeFieldDateOfBirth": "Date de naissance",
+  "employeeFieldContractTypeRequired": "Type de contrat *",
+  "employeeContractTypesLoadError": "Impossible de charger les types de contrat : {error}",
+  "@employeeContractTypesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmploymentTypeRequired": "Régime de travail *",
+  "employeeFieldWeeklyHours": "Heures hebdomadaires",
+  "employeeSensitiveFormHint": "Visible et modifiable uniquement par owner/admin — un membre sans ces droits verra une erreur s'il tente d'enregistrer.",
+  "employeeFieldSalary": "Salaire (MAD)",
+  "employeeFieldSalaryHelper": "Conditionne les futurs calculateurs si renseigné",
+  "employeeSaveButton": "Enregistrer",
+  "employeeSavingButton": "Enregistrement…",
+  "employeeHireDateRequiredError": "La date d'embauche est obligatoire.",
+  "employeeContractTypeRequiredError": "Le type de contrat est obligatoire.",
+  "employeeSensitiveSaveDeniedMessage": "Employé enregistré, mais vous n'avez pas les droits pour modifier les informations sensibles."
 }

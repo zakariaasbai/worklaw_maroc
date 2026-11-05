@@ -53,5 +53,76 @@
   "languageSelectorLabel": "اللغة",
   "languageFrench": "الفرنسية",
   "languageArabic": "العربية",
-  "languageEnglish": "الإنجليزية"
+  "languageEnglish": "الإنجليزية",
+
+  "employeesListTitle": "الموظفون",
+  "employeesStatusActive": "نشطون",
+  "employeesStatusArchived": "مؤرشفون",
+  "employeesAddTooltip": "إضافة موظف",
+  "employeesLoadError": "خطأ في التحميل: {error}",
+  "@employeesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeesEmpty": "لا يوجد موظفون.",
+
+  "employeeDetailTitle": "ملف الموظف",
+  "employeeArchivedChip": "مؤرشف",
+  "employeeFieldEmployeeNumber": "الرقم الداخلي",
+  "employeeFieldPosition": "الوظيفة",
+  "employeeFieldDepartment": "القسم",
+  "employeeFieldHireDate": "تاريخ التوظيف",
+  "employeeFieldContractType": "نوع العقد",
+  "employeeFieldEmploymentType": "نظام العمل",
+  "employeeFieldPhone": "الهاتف",
+  "employeeFieldEmail": "البريد الإلكتروني",
+  "employeeFieldAddress": "العنوان",
+  "employeeFieldNationality": "الجنسية",
+  "employmentTypeFullTime": "دوام كامل",
+  "employmentTypePartTime": "دوام جزئي",
+  "employeeSensitiveSectionTitle": "معلومات حساسة",
+  "employeeSensitiveHidden": "غير مرئية بحسب دورك، أو لم تُدخل بعد.",
+  "employeeSalaryMissing": "الراتب: غير مدخل",
+  "employeeSalaryValue": "الراتب: {amount} {currency}",
+  "@employeeSalaryValue": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "currency": { "type": "String" }
+    }
+  },
+  "employeeSalaryMissingTooltip": "يؤثر هذا الحقل على الحاسبات المستقبلية (الإشعار، التعويض، التصفية النهائية للحساب).",
+  "employeeFieldCin": "البطاقة الوطنية (CIN)",
+  "employeeFieldCnss": "رقم CNSS",
+  "employeeEditButton": "تعديل",
+  "employeeArchiveButton": "أرشفة",
+  "employeeArchiveDialogTitle": "أرشفة هذا الموظف؟",
+  "employeeArchiveDialogContent": "سيظل الموظف قابلاً للعرض (سجل الحسابات)، لكنه لن يظهر بعد الآن في القائمة النشطة.",
+  "employeeArchiveDialogCancel": "إلغاء",
+
+  "employeeFormTitleNew": "موظف جديد",
+  "employeeFormTitleEdit": "تعديل الموظف",
+  "employeeGenericError": "خطأ: {error}",
+  "@employeeGenericError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmployeeNumberRequired": "الرقم الداخلي للموظف *",
+  "employeeFieldFirstName": "الاسم الأول *",
+  "employeeFieldLastName": "الاسم الأخير *",
+  "employeeFieldPositionRequired": "الوظيفة *",
+  "employeeFieldHireDateRequired": "تاريخ التوظيف *",
+  "employeeFieldDateOfBirth": "تاريخ الميلاد",
+  "employeeFieldContractTypeRequired": "نوع العقد *",
+  "employeeContractTypesLoadError": "تعذر تحميل أنواع العقود: {error}",
+  "@employeeContractTypesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmploymentTypeRequired": "نظام العمل *",
+  "employeeFieldWeeklyHours": "ساعات العمل الأسبوعية",
+  "employeeSensitiveFormHint": "مرئي وقابل للتعديل فقط من قبل owner/admin — سيظهر خطأ للعضو الذي لا يملك هذه الصلاحية عند الحفظ.",
+  "employeeFieldSalary": "الراتب (درهم مغربي)",
+  "employeeFieldSalaryHelper": "يؤثر على الحاسبات المستقبلية عند إدخاله",
+  "employeeSaveButton": "حفظ",
+  "employeeSavingButton": "جارٍ الحفظ…",
+  "employeeHireDateRequiredError": "تاريخ التوظيف مطلوب.",
+  "employeeContractTypeRequiredError": "نوع العقد مطلوب.",
+  "employeeSensitiveSaveDeniedMessage": "تم حفظ الموظف، لكن لا تملك الصلاحية لتعديل المعلومات الحساسة."
 }

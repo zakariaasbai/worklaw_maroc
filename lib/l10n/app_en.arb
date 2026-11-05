@@ -53,5 +53,76 @@
   "languageSelectorLabel": "Language",
   "languageFrench": "French",
   "languageArabic": "Arabic",
-  "languageEnglish": "English"
+  "languageEnglish": "English",
+
+  "employeesListTitle": "Employees",
+  "employeesStatusActive": "Active",
+  "employeesStatusArchived": "Archived",
+  "employeesAddTooltip": "Add an employee",
+  "employeesLoadError": "Loading error: {error}",
+  "@employeesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeesEmpty": "No employees.",
+
+  "employeeDetailTitle": "Employee record",
+  "employeeArchivedChip": "Archived",
+  "employeeFieldEmployeeNumber": "Internal ID",
+  "employeeFieldPosition": "Position",
+  "employeeFieldDepartment": "Department",
+  "employeeFieldHireDate": "Hire date",
+  "employeeFieldContractType": "Contract type",
+  "employeeFieldEmploymentType": "Work schedule",
+  "employeeFieldPhone": "Phone",
+  "employeeFieldEmail": "Email",
+  "employeeFieldAddress": "Address",
+  "employeeFieldNationality": "Nationality",
+  "employmentTypeFullTime": "Full time",
+  "employmentTypePartTime": "Part time",
+  "employeeSensitiveSectionTitle": "Sensitive information",
+  "employeeSensitiveHidden": "Not visible with your role, or not entered yet.",
+  "employeeSalaryMissing": "Salary: not entered",
+  "employeeSalaryValue": "Salary: {amount} {currency}",
+  "@employeeSalaryValue": {
+    "placeholders": {
+      "amount": { "type": "String" },
+      "currency": { "type": "String" }
+    }
+  },
+  "employeeSalaryMissingTooltip": "This field drives the future calculators (notice period, severance, final settlement).",
+  "employeeFieldCin": "National ID (CIN)",
+  "employeeFieldCnss": "CNSS number",
+  "employeeEditButton": "Edit",
+  "employeeArchiveButton": "Archive",
+  "employeeArchiveDialogTitle": "Archive this employee?",
+  "employeeArchiveDialogContent": "The employee stays viewable (calculation history), but will no longer appear in the active list.",
+  "employeeArchiveDialogCancel": "Cancel",
+
+  "employeeFormTitleNew": "New employee",
+  "employeeFormTitleEdit": "Edit employee",
+  "employeeGenericError": "Error: {error}",
+  "@employeeGenericError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmployeeNumberRequired": "Internal employee ID *",
+  "employeeFieldFirstName": "First name *",
+  "employeeFieldLastName": "Last name *",
+  "employeeFieldPositionRequired": "Position *",
+  "employeeFieldHireDateRequired": "Hire date *",
+  "employeeFieldDateOfBirth": "Date of birth",
+  "employeeFieldContractTypeRequired": "Contract type *",
+  "employeeContractTypesLoadError": "Could not load contract types: {error}",
+  "@employeeContractTypesLoadError": {
+    "placeholders": { "error": { "type": "String" } }
+  },
+  "employeeFieldEmploymentTypeRequired": "Work schedule *",
+  "employeeFieldWeeklyHours": "Weekly hours",
+  "employeeSensitiveFormHint": "Visible and editable only by owner/admin — a member without those rights will see an error when saving.",
+  "employeeFieldSalary": "Salary (MAD)",
+  "employeeFieldSalaryHelper": "Drives the future calculators once entered",
+  "employeeSaveButton": "Save",
+  "employeeSavingButton": "Saving…",
+  "employeeHireDateRequiredError": "The hire date is required.",
+  "employeeContractTypeRequiredError": "The contract type is required.",
+  "employeeSensitiveSaveDeniedMessage": "Employee saved, but you don't have the rights to edit sensitive information."
 }

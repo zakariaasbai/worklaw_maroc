@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:worklaw_maroc/l10n/generated/app_localizations.dart';
+import '../../../shared/widgets/language_selector.dart';
 import '../application/employees_providers.dart';
 import '../domain/employee.dart';
 
@@ -18,24 +20,28 @@ class _EmployeesListScreenState extends ConsumerState<EmployeesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final employeesAsync = ref.watch(employeesListProvider(_statusFilter));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Employés'),
+        title: Text(l10n.employeesListTitle),
+        actions: const [
+          Padding(padding: EdgeInsets.all(8), child: LanguageSelector()),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SegmentedButton<EmployeeStatus>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: EmployeeStatus.active,
-                  label: Text('Actifs'),
+                  label: Text(l10n.employeesStatusActive),
                 ),
                 ButtonSegment(
                   value: EmployeeStatus.archived,
-                  label: Text('Archivés'),
+                  label: Text(l10n.employeesStatusArchived),
                 ),
               ],
               selected: {_statusFilter},
@@ -48,7 +54,7 @@ class _EmployeesListScreenState extends ConsumerState<EmployeesListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/employees/new'),
-        tooltip: 'Ajouter un employé',
+        tooltip: l10n.employeesAddTooltip,
         child: const Icon(Icons.add),
       ),
       body: employeesAsync.when(
@@ -56,12 +62,12 @@ class _EmployeesListScreenState extends ConsumerState<EmployeesListScreen> {
         error: (error, stackTrace) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text('Erreur de chargement : $error'),
+            child: Text(l10n.employeesLoadError(error.toString())),
           ),
         ),
         data: (employees) {
           if (employees.isEmpty) {
-            return const Center(child: Text('Aucun employé.'));
+            return Center(child: Text(l10n.employeesEmpty));
           }
           return ListView.separated(
             itemCount: employees.length,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:worklaw_maroc/l10n/generated/app_localizations.dart';
 import '../application/employees_providers.dart';
 import '../domain/contract_type.dart';
 import '../domain/employee.dart';
@@ -89,10 +90,12 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (!_isEditing) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Nouvel employé')),
-        body: _buildForm(context, existing: null),
+        appBar: AppBar(title: Text(l10n.employeeFormTitleNew)),
+        body: _buildForm(context, l10n, existing: null),
       );
     }
 
@@ -102,20 +105,25 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Modifier employé')),
+      appBar: AppBar(title: Text(l10n.employeeFormTitleEdit)),
       body: employeeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('Erreur : $error')),
+        error: (error, stackTrace) =>
+            Center(child: Text(l10n.employeeGenericError(error.toString()))),
         data: (employee) {
           final sensitive = sensitiveAsync.asData?.value;
           _prefill(employee, sensitive);
-          return _buildForm(context, existing: employee);
+          return _buildForm(context, l10n, existing: employee);
         },
       ),
     );
   }
 
-  Widget _buildForm(BuildContext context, {required Employee? existing}) {
+  Widget _buildForm(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required Employee? existing,
+  }) {
     final contractTypesAsync = ref.watch(contractTypesProvider);
 
     return Form(
@@ -125,47 +133,52 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
         children: [
           TextFormField(
             controller: _employeeNumberController,
-            decoration: const InputDecoration(
-              labelText: 'Identifiant employé interne *',
+            decoration: InputDecoration(
+              labelText: l10n.employeeFieldEmployeeNumberRequired,
             ),
-            validator: _requiredValidator,
+            validator: (value) => _requiredValidator(value, l10n),
           ),
           TextFormField(
             controller: _firstNameController,
-            decoration: const InputDecoration(labelText: 'Prénom *'),
-            validator: _requiredValidator,
+            decoration: InputDecoration(labelText: l10n.employeeFieldFirstName),
+            validator: (value) => _requiredValidator(value, l10n),
           ),
           TextFormField(
             controller: _lastNameController,
-            decoration: const InputDecoration(labelText: 'Nom *'),
-            validator: _requiredValidator,
+            decoration: InputDecoration(labelText: l10n.employeeFieldLastName),
+            validator: (value) => _requiredValidator(value, l10n),
           ),
           TextFormField(
             controller: _positionController,
-            decoration: const InputDecoration(labelText: 'Poste *'),
-            validator: _requiredValidator,
+            decoration: InputDecoration(
+              labelText: l10n.employeeFieldPositionRequired,
+            ),
+            validator: (value) => _requiredValidator(value, l10n),
           ),
           TextFormField(
             controller: _departmentController,
-            decoration: const InputDecoration(labelText: 'Département'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldDepartment),
           ),
           _DatePickerField(
-            label: "Date d'embauche *",
+            label: l10n.employeeFieldHireDateRequired,
             value: _hireDate,
             onChanged: (date) => setState(() => _hireDate = date),
           ),
           _DatePickerField(
-            label: 'Date de naissance',
+            label: l10n.employeeFieldDateOfBirth,
             value: _dateOfBirth,
             onChanged: (date) => setState(() => _dateOfBirth = date),
           ),
           contractTypesAsync.when(
             loading: () => const LinearProgressIndicator(),
-            error: (error, stackTrace) =>
-                Text('Impossible de charger les types de contrat : $error'),
+            error: (error, stackTrace) => Text(
+              l10n.employeeContractTypesLoadError(error.toString()),
+            ),
             data: (types) => DropdownButtonFormField<String>(
               value: _contractTypeId,
-              decoration: const InputDecoration(labelText: 'Type de contrat *'),
+              decoration: InputDecoration(
+                labelText: l10n.employeeFieldContractTypeRequired,
+              ),
               items: types
                   .map(
                     (ContractType t) => DropdownMenuItem(
@@ -176,20 +189,22 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
                   .toList(),
               onChanged: (value) => setState(() => _contractTypeId = value),
               validator: (value) =>
-                  value == null ? 'Champ obligatoire' : null,
+                  value == null ? l10n.validationRequired : null,
             ),
           ),
           DropdownButtonFormField<EmploymentType>(
             value: _employmentType,
-            decoration: const InputDecoration(labelText: 'Régime de travail *'),
-            items: const [
+            decoration: InputDecoration(
+              labelText: l10n.employeeFieldEmploymentTypeRequired,
+            ),
+            items: [
               DropdownMenuItem(
                 value: EmploymentType.fullTime,
-                child: Text('Temps plein'),
+                child: Text(l10n.employmentTypeFullTime),
               ),
               DropdownMenuItem(
                 value: EmploymentType.partTime,
-                child: Text('Temps partiel'),
+                child: Text(l10n.employmentTypePartTime),
               ),
             ],
             onChanged: (value) =>
@@ -198,74 +213,72 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
           if (_employmentType == EmploymentType.partTime)
             TextFormField(
               controller: _weeklyHoursController,
-              decoration: const InputDecoration(
-                labelText: 'Heures hebdomadaires',
+              decoration: InputDecoration(
+                labelText: l10n.employeeFieldWeeklyHours,
               ),
               keyboardType: TextInputType.number,
             ),
           TextFormField(
             controller: _nationalityController,
-            decoration: const InputDecoration(labelText: 'Nationalité'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldNationality),
           ),
           TextFormField(
             controller: _addressController,
-            decoration: const InputDecoration(labelText: 'Adresse'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldAddress),
           ),
           TextFormField(
             controller: _phoneController,
-            decoration: const InputDecoration(labelText: 'Téléphone'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldPhone),
           ),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(labelText: 'Email'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldEmail),
           ),
           const SizedBox(height: 24),
           Text(
-            'Informations sensibles',
+            l10n.employeeSensitiveSectionTitle,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const Text(
-            'Visible et modifiable uniquement par owner/admin — un membre '
-            "sans ces droits verra une erreur s'il tente d'enregistrer.",
-            style: TextStyle(fontSize: 12),
-          ),
+          Text(l10n.employeeSensitiveFormHint, style: const TextStyle(fontSize: 12)),
           TextFormField(
             controller: _cinController,
-            decoration: const InputDecoration(labelText: 'CIN'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldCin),
           ),
           TextFormField(
             controller: _salaryController,
-            decoration: const InputDecoration(
-              labelText: 'Salaire (MAD)',
-              helperText: 'Conditionne les futurs calculateurs si renseigné',
+            decoration: InputDecoration(
+              labelText: l10n.employeeFieldSalary,
+              helperText: l10n.employeeFieldSalaryHelper,
             ),
             keyboardType: TextInputType.number,
           ),
           TextFormField(
             controller: _cnssController,
-            decoration: const InputDecoration(labelText: 'N° CNSS'),
+            decoration: InputDecoration(labelText: l10n.employeeFieldCnss),
           ),
           const SizedBox(height: 24),
           FilledButton(
-            onPressed: _saving ? null : () => _submit(existing),
-            child: Text(_saving ? 'Enregistrement...' : 'Enregistrer'),
+            onPressed: _saving ? null : () => _submit(existing, l10n),
+            child: Text(
+              _saving ? l10n.employeeSavingButton : l10n.employeeSaveButton,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submit(Employee? existing) async {
+  Future<void> _submit(Employee? existing, AppLocalizations l10n) async {
     if (!_formKey.currentState!.validate()) return;
     if (_hireDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("La date d'embauche est obligatoire.")),
+        SnackBar(content: Text(l10n.employeeHireDateRequiredError)),
       );
       return;
     }
     if (_contractTypeId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Le type de contrat est obligatoire.')),
+        SnackBar(content: Text(l10n.employeeContractTypeRequiredError)),
       );
       return;
     }
@@ -322,12 +335,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
         } catch (_) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Employé enregistré, mais vous n'avez pas les droits "
-                  'pour modifier les informations sensibles.',
-                ),
-              ),
+              SnackBar(content: Text(l10n.employeeSensitiveSaveDeniedMessage)),
             );
           }
         }
@@ -343,7 +351,7 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur : $error')),
+          SnackBar(content: Text(l10n.employeeGenericError(error.toString()))),
         );
       }
     } finally {
@@ -354,8 +362,8 @@ class _EmployeeFormScreenState extends ConsumerState<EmployeeFormScreen> {
   String? _emptyToNull(String value) =>
       value.trim().isEmpty ? null : value.trim();
 
-  String? _requiredValidator(String? value) =>
-      (value == null || value.trim().isEmpty) ? 'Champ obligatoire' : null;
+  String? _requiredValidator(String? value, AppLocalizations l10n) =>
+      (value == null || value.trim().isEmpty) ? l10n.validationRequired : null;
 }
 
 class _DatePickerField extends StatelessWidget {
