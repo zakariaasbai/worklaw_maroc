@@ -22,6 +22,7 @@ set -euo pipefail
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1"; exit 1; }
+skip() { echo "SKIP: $1"; exit 2; }
 
 signup() {
   local email="$1" full_name="$2" org_name="$3"
@@ -39,6 +40,9 @@ row_count() {
 # --- Test 1: happy path creates profile + organization + owner membership ---
 EMAIL_OK="trigger-test-ok-$(date +%s)@test.local"
 STATUS=$(signup "$EMAIL_OK" "Jane Doe" "Acme SARL")
+if [ "$STATUS" = "429" ]; then
+  skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
+fi
 [ "$STATUS" = "200" ] || fail "happy path signup returned HTTP $STATUS (expected 200): $(cat /tmp/handle_new_user_test_response.json)"
 
 PROFILE_COUNT=$(row_count "select count(*) from public.profiles p join auth.users u on u.id = p.id where u.email = '$EMAIL_OK';")
@@ -57,6 +61,9 @@ pass "happy path creates profile + organization + owner membership"
 # --- Test 2: missing organization_name must reject signup, no orphan rows ---
 EMAIL_BAD="trigger-test-bad-$(date +%s)@test.local"
 STATUS=$(signup "$EMAIL_BAD" "John Doe" "")
+if [ "$STATUS" = "429" ]; then
+  skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
+fi
 [ "$STATUS" != "200" ] || fail "signup with empty organization_name should have failed, got HTTP 200"
 
 ORPHAN_COUNT=$(row_count "select count(*) from auth.users where email = '$EMAIL_BAD';")

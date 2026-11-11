@@ -10,10 +10,22 @@ require_env() {
 
 pass() { echo "PASS: $1"; }
 fail() { echo "FAIL: $1"; exit 1; }
+# Exit code 2 is reserved for "not a real result" — rate-limited, not
+# retried, and counted separately from pass/fail by run_all.sh.
+skip() { echo "SKIP: $1"; exit 2; }
 
 # json_field '<json>' fieldName -> value (string/uuid fields only)
+#
+# The `|| true` matters: under `set -e` + `pipefail` (every test script
+# has both), if the field is absent `grep -o` finds no match and exits 1,
+# which — because this pipeline is the direct right-hand side of a plain
+# assignment like `TOKEN=$(json_field ...)` — would silently kill the
+# whole script right there, before it ever reaches the caller's own
+# `[ -n "$TOKEN" ] || fail "..."` check. "Field absent" (e.g. no
+# access_token because signin failed) is an expected, caller-handled
+# case, not a script-ending error.
 json_field() {
-  grep -o "\"$2\":\"[^\"]*\"" <<< "$1" | head -1 | cut -d'"' -f4
+  grep -o "\"$2\":\"[^\"]*\"" <<< "$1" | head -1 | cut -d'"' -f4 || true
 }
 
 psql_scalar() {
@@ -22,10 +34,17 @@ psql_scalar() {
 
 signup() {
   local email="$1" password="$2" full_name="$3" org_name="$4"
-  curl -s -X POST "$SUPABASE_URL/auth/v1/signup" \
+  local response status body
+  response=$(curl -s -w '\n%{http_code}' -X POST "$SUPABASE_URL/auth/v1/signup" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"$password\",\"data\":{\"full_name\":\"$full_name\",\"organization_name\":\"$org_name\"}}"
+    -d "{\"email\":\"$email\",\"password\":\"$password\",\"data\":{\"full_name\":\"$full_name\",\"organization_name\":\"$org_name\"}}")
+  status=$(tail -n1 <<< "$response")
+  body=$(sed '$d' <<< "$response")
+  if [ "$status" = "429" ]; then
+    skip "signup for $email rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
+  fi
+  printf '%s' "$body"
 }
 
 signin() {

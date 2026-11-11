@@ -91,16 +91,20 @@ echo
 
 passed=0
 failed=0
+skipped=0
 failed_names=()
 failed_first_lines=()
+skipped_names=()
+skipped_first_lines=()
 
 # First line that looks like the actual cause, for the final summary —
-# prefers a "FAIL: ..." line (how every test reports its own assertion
-# failures) and falls back to the first non-empty output line (e.g. a
-# raw curl/psql error if the script died before reaching any assertion).
-first_error_line() {
-  local text="$1" line
-  line=$(printf '%s\n' "$text" | grep -m1 -i "FAIL:" || true)
+# prefers a line matching the given marker ("FAIL:" or "SKIP:", how a
+# test reports its own result) and falls back to the first non-empty
+# output line (e.g. a raw curl/psql error if the script died before
+# reaching any assertion at all).
+first_marked_line() {
+  local text="$1" marker="$2" line
+  line=$(printf '%s\n' "$text" | grep -m1 -i "$marker" || true)
   if [ -z "$line" ]; then
     line=$(printf '%s\n' "$text" | grep -m1 . || true)
   fi
@@ -116,18 +120,34 @@ for test_file in ./*.sh; do
   output=$(bash "$test_file" 2>&1)
   status=$?
   printf '%s\n' "$output"
-  if [ "$status" -eq 0 ]; then
-    passed=$((passed + 1))
-  else
-    failed=$((failed + 1))
-    failed_names+=("$base")
-    failed_first_lines+=("$(first_error_line "$output")")
-  fi
+  case "$status" in
+    0)
+      passed=$((passed + 1))
+      ;;
+    2)
+      # Reserved exit code for "rate limited, not retried" — see
+      # skip() in _helpers.sh / handle_new_user_test.sh. Not a failure.
+      skipped=$((skipped + 1))
+      skipped_names+=("$base")
+      skipped_first_lines+=("$(first_marked_line "$output" "SKIP:")")
+      ;;
+    *)
+      failed=$((failed + 1))
+      failed_names+=("$base")
+      failed_first_lines+=("$(first_marked_line "$output" "FAIL:")")
+      ;;
+  esac
   echo
 done
 
 echo "========================================"
-echo "Summary: $passed passed, $failed failed"
+echo "Summary: $passed passed, $failed failed, $skipped skipped"
+if [ "$skipped" -gt 0 ]; then
+  echo "Skipped tests:"
+  for i in "${!skipped_names[@]}"; do
+    echo "  - ${skipped_names[$i]}: ${skipped_first_lines[$i]}"
+  done
+fi
 if [ "$failed" -gt 0 ]; then
   echo "Failed tests:"
   for i in "${!failed_names[@]}"; do
