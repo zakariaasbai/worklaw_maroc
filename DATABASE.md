@@ -28,6 +28,7 @@ npx supabase db reset
 | `supabase/migrations/20260917120000_create_organizations_schema.sql` | Milestone 2 : `profiles`, `organizations`, `organization_members`, trigger `handle_new_user`, RLS de base |
 | `supabase/migrations/20260929120000_employees_schema.sql` | Milestone 3 : `contract_types`, `employees`, `employee_sensitive_data`, RLS (dont accès salaire/CNSS/CIN réservé owner/admin) |
 | `supabase/migrations/20261105120000_legal_rules_schema.sql` | Milestone 5 Partie B : `legal_sources`, `legal_rules` (versionnée, garde-fous DB), vue `legal_rules_active`, fonction `get_applicable_rule()`, `calculation_runs` / `calculation_run_rules` (immuables). **Aucune règle ni source n'est seedée.** |
+| `supabase/migrations/20261109120000_security_hardening.sql` | Audit sécurité : FK composites (`employee_id`/`organization_id` cross-checkées via `employees`/`calculation_runs`/`calculation_run_rules`), policies RLS restreintes explicitement `to authenticated`, immutabilité `legal_rules` renforcée (régression de statut bloquée, `verified_by`/`verified_at`/`legal_source_id`/`jurisdiction` protégés), `EXECUTE` resserré sur les fonctions `SECURITY DEFINER`, trigger `prevent_employee_organization_change()` (`employees.organization_id` immuable après création). Voir le rapport d'audit pour le détail. |
 
 Toute nouvelle migration se crée avec :
 
@@ -102,9 +103,41 @@ bash supabase/tests/legal_rules_visibility_test.sh
 bash supabase/tests/calculation_runs_test.sh
 ```
 
-- **`legal_rules_constraints_test.sh`** : chaque scénario tourne dans un `BEGIN`/`ROLLBACK` (rien n'est jamais commité) et vérifie, via la connexion directe : `legal_source_id` obligatoire à partir de `SOURCE_FOUND`, `verified_by`/`verified_at` obligatoires à partir de `VERIFIED`, `rule_definition` immuable une fois `VERIFIED`, deux périodes qui se chevauchent pour le même `rule_key` sont rejetées, et `get_applicable_rule()` retrouve bien la version qui était en vigueur à une date passée (pas la version actuelle).
+- **`legal_rules_constraints_test.sh`** : chaque scénario tourne dans un `BEGIN`/`ROLLBACK` (rien n'est jamais commité) et vérifie, via la connexion directe : `legal_source_id` obligatoire à partir de `SOURCE_FOUND`, `verified_by`/`verified_at` obligatoires à partir de `VERIFIED`, `rule_definition` immuable une fois `VERIFIED`, deux périodes qui se chevauchent pour le même `rule_key` sont rejetées, `get_applicable_rule()` retrouve bien la version qui était en vigueur à une date passée (pas la version actuelle), et (ajouté par l'audit sécurité) qu'une régression de statut `ACTIVE → DRAFT` est rejetée et que `verified_at` est lui aussi immuable une fois `VERIFIED`.
 - **`legal_rules_visibility_test.sh`** : une ligne `DRAFT` et une ligne `ACTIVE` sont créées via `SUPABASE_DB_URL` (seul moyen, pas de policy d'écriture côté client) ; la vérification passe par la clé anon + un vrai JWT — seule la ligne `ACTIVE` est visible via l'API, `legal_sources` est lisible intégralement.
-- **`calculation_runs_test.sh`** : isolation multi-tenant sur `calculation_runs`/`calculation_run_rules` (même pattern que Milestone 3), puis vérifie qu'une tentative de `UPDATE` ou `DELETE` ne change rien — aucune des deux tables n'a de policy pour ces opérations, un calcul est un snapshot immuable.
+- **`calculation_runs_test.sh`** : isolation multi-tenant sur `calculation_runs`/`calculation_run_rules` (même pattern que Milestone 3), vérifie qu'une tentative de `UPDATE` ou `DELETE` ne change rien, qu'un `calculated_by` forgé (différent de l'utilisateur connecté) est rejeté, et (ajouté par l'audit sécurité) qu'un `calculation_runs` référençant un `employee_id` d'une autre organisation est rejeté.
+
+## Audit sécurité (Milestone 5 hardening) — tests dédiés
+
+```bash
+bash supabase/tests/employee_sensitive_data_cross_org_test.sh
+bash supabase/tests/anon_vs_authenticated_test.sh
+bash supabase/tests/employees_organization_immutability_test.sh
+```
+
+- **`employee_sensitive_data_cross_org_test.sh`** : avant le correctif (`20261109120000_security_hardening.sql`), un owner/admin de l'organisation B pouvait insérer une ligne `employee_sensitive_data` avec `employee_id` pointant vers un employé de l'organisation A tout en déclarant `organization_id = B` — l'ancienne policy INSERT ne vérifiait que `organization_id`, jamais la cohérence avec l'employé réellement référencé. Ce test le vérifie via la clé anon + un vrai JWT (chemin réellement accessible depuis le client, pas seulement en théorie).
+- **`anon_vs_authenticated_test.sh`** : appelle réellement l'API REST avec la clé anon **seule** (sans session utilisateur) sur `/rest/v1/employees` et `/rest/v1/organizations` — vérifie qu'aucune ligne n'est retournée, puis vérifie qu'un membre authentifié de l'organisation garde un accès normal à ses propres données. Ne se contente pas d'inspecter les policies en SQL.
+- **`employees_organization_immutability_test.sh`** : crée un utilisateur privilégié dans **deux** organisations (seul cas réaliste où le trou aurait pu être exploité), tente de changer `organization_id` d'un employé de l'organisation A vers l'organisation B → rejeté par `prevent_employee_organization_change()` ; vérifie ensuite qu'une modification normale (`department`) sur le même employé fonctionne toujours.
+
+Les autres nouveaux tests de l'audit (régression de statut, `verified_at` immuable, `calculation_runs` cross-org) sont intégrés directement dans `legal_rules_constraints_test.sh` et `calculation_runs_test.sh` ci-dessus plutôt que dans des fichiers séparés.
+
+## Lancer tous les tests d'un coup
+
+```bash
+bash supabase/tests/run_all.sh
+```
+
+Demande interactivement, dans l'ordre : `SUPABASE_ANON_KEY` (saisie visible, pas un secret — mais son format est validé : doit commencer par `eyJ` ou `sb_publishable_` et dépasser 40 caractères, sinon le script s'arrête avec un message clair plutôt que de laisser échouer les 10 tests), l'hôte du **Session Pooler** (ex. `aws-0-eu-west-3.pooler.supabase.com` — visible dans Project Settings → Database → Connection pooling → Session pooler), et le mot de passe DB (saisie masquée, `read -s`, percent-encodé dans l'URI). Aucun des deux secrets n'est jamais écrit dans un fichier ni affiché. **Ne jamais lancer ce script avec `bash -x`** — ça afficherait `SUPABASE_DB_URL`, qui contient le mot de passe.
+
+Avant de lancer les 10 tests, le script fait un unique `select 1;` via le pooler pour vérifier la connexion — s'il échoue, il affiche la cause exacte et s'arrête immédiatement, plutôt que de laisser 10 tests échouer un par un pour la même raison. Le résumé final liste, pour chaque test en échec, la première ligne d'erreur pertinente (plus besoin de faire défiler toute la sortie pour comprendre pourquoi un test a échoué).
+
+### Pourquoi le Session Pooler et pas la connexion directe
+
+L'hôte de connexion directe (`db.<ref>.supabase.co`) est IPv6 uniquement sur de nombreux projets Supabase — injoignable depuis WSL2 par défaut (pas de sortie IPv6 sans configuration réseau supplémentaire), avec une erreur typique `Network is unreachable`. Le Session Pooler (`aws-0-<région>.pooler.supabase.com`) est compatible IPv4 et conçu précisément pour ce cas. Avec le pooler, l'utilisateur de connexion devient `postgres.<project-ref>` (pas juste `postgres`) — `run_all.sh` construit déjà ça correctement.
+
+### Limite d'envoi d'emails (HTTP 429 `over_email_send_rate_limit`)
+
+Chaque `signup()` dans les tests déclenche un email de confirmation réel (puisque **Confirm email reste activé**, volontairement — ne pas le désactiver). Le service d'envoi d'emails par défaut de Supabase (sans SMTP personnalisé) a une limite horaire très basse, vite atteinte en lançant toute la suite de tests. Recommandation : configurer un SMTP personnalisé côté dashboard (Authentication → Email → SMTP Settings) — ça lève la limite par défaut et c'est de toute façon nécessaire avant un lancement commercial (les emails de confirmation/réinitialisation ne doivent pas partir d'une adresse Supabase partagée pour de vrais clients). Une amélioration complémentaire possible côté tests : des comptes de test stables, confirmés une fois, avec connexion (`signin()`) plutôt que ré-inscription quand le compte existe déjà — à faire si la limite reste un problème même avec un SMTP personnalisé.
 
 ## Arrêter Supabase local
 

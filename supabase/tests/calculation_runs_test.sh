@@ -29,8 +29,9 @@ TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")
 PROFILE_A=$(psql_scalar "select id from public.profiles where email = '$EMAIL_A';")
 PROFILE_B=$(psql_scalar "select id from public.profiles where email = '$EMAIL_B';")
 ORG_A=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_A")")" "id")
+ORG_B=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_B")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN_A")")" "id")
-[ -n "$PROFILE_A" ] && [ -n "$PROFILE_B" ] && [ -n "$ORG_A" ] && [ -n "$CDI_ID" ] || \
+[ -n "$PROFILE_A" ] && [ -n "$PROFILE_B" ] && [ -n "$ORG_A" ] && [ -n "$ORG_B" ] && [ -n "$CDI_ID" ] || \
   fail "setup: could not resolve profile/org/CDI id"
 
 EMP_BODY="{\"organization_id\":\"$ORG_A\",\"employee_number\":\"EMP-CALC-1\",\"first_name\":\"Nadia\",\"last_name\":\"Idrissi\",\"position\":\"Dev\",\"hire_date\":\"2021-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
@@ -56,6 +57,18 @@ FORGED_RESP=$(rest POST "calculation_runs" "$TOKEN_A" "$FORGED_BODY")
 FORGED_STATUS=$(rest_status "$FORGED_RESP")
 [ "$FORGED_STATUS" != "201" ] || fail "insert with calculated_by != auth.uid() should have been rejected, got HTTP 201"
 pass "calculation_runs insert with a forged calculated_by (not the inserting user) is rejected"
+
+# --- Security audit (Milestone 5 hardening): org B must not be able to
+#     create a calculation_runs row pointing employee_id at org A's
+#     employee while declaring organization_id = org B. Before the
+#     composite FK fix, only organization_id was checked, so this
+#     succeeded — a client-reachable cross-org data integrity issue, not
+#     just a theoretical one. ---
+XORG_BODY="{\"organization_id\":\"$ORG_B\",\"employee_id\":\"$EMP_ID\",\"calculator_key\":\"test_calc\",\"calculator_version\":\"v1\",\"input_snapshot\":{\"x\":1},\"result_snapshot\":{\"y\":2},\"calculated_by\":\"$PROFILE_B\"}"
+XORG_RESP=$(rest POST "calculation_runs" "$TOKEN_B" "$XORG_BODY")
+[ "$(rest_status "$XORG_RESP")" != "201" ] || \
+  fail "org B was able to create a calculation run against org A's employee (cross-org FK missing): $(rest_body "$XORG_RESP")"
+pass "calculation_runs insert referencing another organization's employee is rejected"
 
 # --- A creates a calculation run + attaches the fixture rule ---
 RUN_BODY="{\"organization_id\":\"$ORG_A\",\"employee_id\":\"$EMP_ID\",\"calculator_key\":\"test_calc\",\"calculator_version\":\"v1\",\"input_snapshot\":{\"x\":1},\"result_snapshot\":{\"y\":2},\"calculated_by\":\"$PROFILE_A\"}"

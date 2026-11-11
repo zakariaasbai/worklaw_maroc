@@ -134,4 +134,34 @@ expect_success "
   \$\$;
 " "get_applicable_rule() resolves the version that was in force at a past date, not today's"
 
+# --- Test 6 (security audit hardening): status cannot regress out of
+#     VERIFIED/ACTIVE. Before this fix, flipping status back to DRAFT was
+#     allowed by the trigger (it only guarded the protected fields), which
+#     would have reopened rule_definition/effective_from/
+#     input_schema_version to editing on a second statement. ---
+expect_fail "
+  insert into public.legal_sources (title, reference, url_or_citation, added_by)
+  values ('Test source 6', 'Art. 6', 'https://example.test/6', '$PROFILE_ID');
+  insert into public.legal_rules
+    (rule_key, version, status, legal_source_id, effective_from, input_schema_version, rule_definition, created_by, verified_by, verified_at)
+  select '${RULE_KEY}_f', 1, 'ACTIVE', ls.id, '2024-01-01', 'v1', '{}', '$PROFILE_ID', '$PROFILE_ID', now()
+  from public.legal_sources ls where ls.title = 'Test source 6';
+  update public.legal_rules set status = 'DRAFT' where rule_key = '${RULE_KEY}_f';
+" "cannot move status from ACTIVE back to DRAFT" \
+  "status cannot regress from ACTIVE back to DRAFT"
+
+# --- Test 7 (security audit hardening): verified_by / verified_at become
+#     immutable too once VERIFIED/ACTIVE — otherwise the audit trail of
+#     who verified a rule and when could be silently overwritten. ---
+expect_fail "
+  insert into public.legal_sources (title, reference, url_or_citation, added_by)
+  values ('Test source 7', 'Art. 7', 'https://example.test/7', '$PROFILE_ID');
+  insert into public.legal_rules
+    (rule_key, version, status, legal_source_id, effective_from, input_schema_version, rule_definition, created_by, verified_by, verified_at)
+  select '${RULE_KEY}_g', 1, 'VERIFIED', ls.id, '2024-01-01', 'v1', '{}', '$PROFILE_ID', '$PROFILE_ID', now()
+  from public.legal_sources ls where ls.title = 'Test source 7';
+  update public.legal_rules set verified_at = now() + interval '1 day' where rule_key = '${RULE_KEY}_g';
+" "immutable once a row is VERIFIED or ACTIVE" \
+  "verified_at cannot be changed once VERIFIED"
+
 echo "All legal_rules constraint tests passed."
