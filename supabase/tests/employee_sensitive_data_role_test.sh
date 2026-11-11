@@ -11,45 +11,51 @@
 # member, exactly like the Flutter app would call it. That's the part that
 # actually proves the RLS behavior.
 #
-# Prerequisites: same as supabase/tests/handle_new_user_test.sh.
+# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# and signs in — no signup here, so this never touches the email
+# rate limit.
+#
+# Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
+# `bash supabase/tests/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/employee_sensitive_data_role_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-PASSWORD="Passw0rd!23"
-EMAIL_OWNER="sensitive-owner-$(date +%s)@example.com"
-EMAIL_MEMBER="sensitive-member-$(date +%s)@example.com"
-
-signup "$EMAIL_OWNER" "$PASSWORD" "Owner" "Sensitive Data Org" >/dev/null
-# Signing up gives this user their own separate organization (as owner) —
-# irrelevant here, we only use their identity, then add them as 'member' of
+PASSWORD="$TEST_USER_PASSWORD"
+EMAIL_OWNER="stable-sensitive-owner@worklaw-test.test"
+# This account owns its own separate organization (provisioned that way)
+# — irrelevant here, we only use its identity, then add it as 'member' of
 # EMAIL_OWNER's organization below.
-signup "$EMAIL_MEMBER" "$PASSWORD" "Member" "Member's Own Org" >/dev/null
+EMAIL_MEMBER="stable-sensitive-member@worklaw-test.test"
 
 TOKEN_OWNER=$(json_field "$(signin "$EMAIL_OWNER" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_OWNER" ] || fail "could not sign in as owner"
+[ -n "$TOKEN_OWNER" ] || fail "could not sign in as owner — run provision_test_users.sh first?"
 
 ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_OWNER")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN_OWNER")")" "id")
 [ -n "$ORG_ID" ] && [ -n "$CDI_ID" ] || fail "setup: could not resolve org / CDI id"
 
-CREATE_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-SENS-1\",\"first_name\":\"Sara\",\"last_name\":\"Bennani\",\"position\":\"RH\",\"hire_date\":\"2022-03-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
+CREATE_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-SENS-$(date +%s)\",\"first_name\":\"Sara\",\"last_name\":\"Bennani\",\"position\":\"RH\",\"hire_date\":\"2022-03-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
 CREATE_RESP=$(rest POST "employees" "$TOKEN_OWNER" "$CREATE_BODY")
 [ "$(rest_status "$CREATE_RESP")" = "201" ] || fail "setup: could not create employee: $(rest_body "$CREATE_RESP")"
 EMP_ID=$(json_field "$(rest_body "$CREATE_RESP")" "id")
 [ -n "$EMP_ID" ] || fail "setup: no employee id returned"
 
-SENSITIVE_BODY="{\"employee_id\":\"$EMP_ID\",\"organization_id\":\"$ORG_ID\",\"salary_amount\":12000,\"salary_currency\":\"MAD\",\"cin\":\"AB123456\",\"cnss_number\":\"1234567\"}"
+# CIN/CNSS include a timestamp — they're unique per organization, and
+# this organization is now stable/reused across runs.
+SENSITIVE_BODY="{\"employee_id\":\"$EMP_ID\",\"organization_id\":\"$ORG_ID\",\"salary_amount\":12000,\"salary_currency\":\"MAD\",\"cin\":\"AB$(date +%s)\",\"cnss_number\":\"$(date +%s)\"}"
 SENSITIVE_RESP=$(rest POST "employee_sensitive_data" "$TOKEN_OWNER" "$SENSITIVE_BODY")
 [ "$(rest_status "$SENSITIVE_RESP")" = "201" ] || fail "setup: owner could not create employee_sensitive_data row: $(rest_body "$SENSITIVE_RESP")"
 
 # --- Privileged setup step: add MEMBER's profile to ORG_ID as 'member'. ---
+# ON CONFLICT DO NOTHING: both accounts are stable, so this membership
+# already exists from a previous run — not an error, just a no-op then.
 MEMBER_PROFILE_ID=$(psql_scalar "select id from public.profiles where email = '$EMAIL_MEMBER';")
 [ -n "$MEMBER_PROFILE_ID" ] || fail "could not resolve member profile id via direct DB connection"
 psql "$SUPABASE_DB_URL" -q -c \
-  "insert into public.organization_members (organization_id, profile_id, role) values ('$ORG_ID', '$MEMBER_PROFILE_ID', 'member');"
+  "insert into public.organization_members (organization_id, profile_id, role) values ('$ORG_ID', '$MEMBER_PROFILE_ID', 'member') on conflict (organization_id, profile_id) do nothing;"
 
 # --- Verification: real client calls, anon key + member's own JWT. ---
 TOKEN_MEMBER=$(json_field "$(signin "$EMAIL_MEMBER" "$PASSWORD")" "access_token")

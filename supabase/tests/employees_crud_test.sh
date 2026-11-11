@@ -2,8 +2,13 @@
 # Milestone 3 — employees CRUD integration test (create/read/update/archive,
 # and confirms hard delete is impossible since there is no DELETE policy).
 #
+# Uses a stable, pre-provisioned account (see provision_test_users.sh)
+# and signs in — no signup here, so this never touches the email
+# rate limit.
+#
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh
-# (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_DB_URL exported).
+# (SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_DB_URL exported), plus
+# `bash supabase/tests/provision_test_users.sh` run at least once.
 #
 # Run: bash supabase/tests/employees_crud_test.sh
 set -euo pipefail
@@ -11,13 +16,11 @@ cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-EMAIL="employees-crud-$(date +%s)@example.com"
-PASSWORD="Passw0rd!23"
-
-signup "$EMAIL" "$PASSWORD" "Test Owner" "CRUD Test Org" >/dev/null
+EMAIL="stable-crud@worklaw-test.test"
+PASSWORD="$TEST_USER_PASSWORD"
 
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
-[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL"
+[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run provision_test_users.sh first?"
 
 ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN")")" "id")
 [ -n "$ORG_ID" ] || fail "could not resolve organization id"
@@ -25,7 +28,7 @@ ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN")")" "id")
 [ -n "$CDI_ID" ] || fail "CDI contract type not found — was the migration applied?"
 
-CREATE_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-001\",\"first_name\":\"Amina\",\"last_name\":\"El Fassi\",\"position\":\"Comptable\",\"hire_date\":\"2024-01-15\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
+CREATE_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-001-$(date +%s)\",\"first_name\":\"Amina\",\"last_name\":\"El Fassi\",\"position\":\"Comptable\",\"hire_date\":\"2024-01-15\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
 CREATE_RESP=$(rest POST "employees" "$TOKEN" "$CREATE_BODY")
 [ "$(rest_status "$CREATE_RESP")" = "201" ] || fail "employee creation failed: $(rest_body "$CREATE_RESP")"
 EMP_ID=$(json_field "$(rest_body "$CREATE_RESP")" "id")

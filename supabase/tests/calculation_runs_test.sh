@@ -9,22 +9,25 @@
 # intentional, see the migration). Everything else goes through the anon
 # key + real JWTs, like the Flutter app would.
 #
-# Prerequisites: same as supabase/tests/handle_new_user_test.sh.
+# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# and signs in — no signup here, so this never touches the email
+# rate limit.
+#
+# Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
+# `bash supabase/tests/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/calculation_runs_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-PASSWORD="Passw0rd!23"
-EMAIL_A="calcrun-a-$(date +%s)@test.local"
-EMAIL_B="calcrun-b-$(date +%s)@test.local"
-signup "$EMAIL_A" "$PASSWORD" "Owner A" "CalcRun Org A" >/dev/null
-signup "$EMAIL_B" "$PASSWORD" "Owner B" "CalcRun Org B" >/dev/null
+PASSWORD="$TEST_USER_PASSWORD"
+EMAIL_A="stable-calcrun-a@worklaw-test.test"
+EMAIL_B="stable-calcrun-b@worklaw-test.test"
 
 TOKEN_A=$(json_field "$(signin "$EMAIL_A" "$PASSWORD")" "access_token")
 TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users"
+[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run provision_test_users.sh first?"
 
 PROFILE_A=$(psql_scalar "select id from public.profiles where email = '$EMAIL_A';")
 PROFILE_B=$(psql_scalar "select id from public.profiles where email = '$EMAIL_B';")
@@ -34,19 +37,22 @@ CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=
 [ -n "$PROFILE_A" ] && [ -n "$PROFILE_B" ] && [ -n "$ORG_A" ] && [ -n "$ORG_B" ] && [ -n "$CDI_ID" ] || \
   fail "setup: could not resolve profile/org/CDI id"
 
-EMP_BODY="{\"organization_id\":\"$ORG_A\",\"employee_number\":\"EMP-CALC-1\",\"first_name\":\"Nadia\",\"last_name\":\"Idrissi\",\"position\":\"Dev\",\"hire_date\":\"2021-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
+EMP_BODY="{\"organization_id\":\"$ORG_A\",\"employee_number\":\"EMP-CALC-$(date +%s)\",\"first_name\":\"Nadia\",\"last_name\":\"Idrissi\",\"position\":\"Dev\",\"hire_date\":\"2021-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
 EMP_RESP=$(rest POST "employees" "$TOKEN_A" "$EMP_BODY")
 [ "$(rest_status "$EMP_RESP")" = "201" ] || fail "setup: could not create employee: $(rest_body "$EMP_RESP")"
 EMP_ID=$(json_field "$(rest_body "$EMP_RESP")" "id")
 
+# Title includes a timestamp so repeated runs against this stable org
+# never match more than one legal_sources row in the lookup below.
 RULE_KEY="calcrun_rule_$(date +%s)"
+SOURCE_TITLE="CalcRun fixture source $(date +%s)"
 RULE_ID=$(psql_scalar "
   insert into public.legal_sources (title, reference, url_or_citation, added_by)
-  values ('CalcRun fixture source', 'Art. 7', 'https://example.test/7', '$PROFILE_A');
+  values ('$SOURCE_TITLE', 'Art. 7', 'https://example.test/7', '$PROFILE_A');
   insert into public.legal_rules
     (rule_key, version, status, legal_source_id, effective_from, input_schema_version, rule_definition, created_by, verified_by, verified_at)
   select '$RULE_KEY', 1, 'ACTIVE', ls.id, '2024-01-01', 'v1', '{}', '$PROFILE_A', '$PROFILE_A', now()
-  from public.legal_sources ls where ls.title = 'CalcRun fixture source'
+  from public.legal_sources ls where ls.title = '$SOURCE_TITLE'
   returning id;
 ")
 [ -n "$RULE_ID" ] || fail "setup: could not create legal_rules fixture row"

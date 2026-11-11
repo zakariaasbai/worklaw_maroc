@@ -7,7 +7,12 @@
 # and no legal rule or source is left behind. Uses the direct Postgres
 # connection (SUPABASE_DB_URL) since this tests raw DB behavior, not RLS.
 #
-# Prerequisites: same as supabase/tests/handle_new_user_test.sh.
+# Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
+# `bash supabase/tests/provision_test_users.sh` run at least once (the
+# PROFILE_ID below just needs to be a valid, stable profiles.id to
+# satisfy created_by/added_by FKs — every scenario runs in its own
+# BEGIN/ROLLBACK anyway, so reusing the same profile across runs is
+# fine).
 # Run: bash supabase/tests/legal_rules_constraints_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -41,10 +46,11 @@ SQL
   pass "$description"
 }
 
-# --- Setup: a real profile id to satisfy created_by/added_by FKs ---
-PASSWORD="Passw0rd!23"
-EMAIL="legal-rules-$(date +%s)@test.local"
-signup "$EMAIL" "$PASSWORD" "Legal Test User" "Legal Rules Test Org" >/dev/null
+# --- Setup: a real, stable profile id to satisfy created_by/added_by FKs ---
+PASSWORD="$TEST_USER_PASSWORD"
+EMAIL="stable-legalrules@worklaw-test.test"
+TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
+[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run provision_test_users.sh first?"
 PROFILE_ID=$(psql_scalar "select id from public.profiles where email = '$EMAIL';")
 [ -n "$PROFILE_ID" ] || fail "setup: could not resolve profile id"
 

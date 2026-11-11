@@ -11,29 +11,32 @@
 # corrective migration applied to see it fail (prove the bug), then
 # again after `npx supabase db push` to see it correctly rejected.
 #
-# Prerequisites: same as supabase/tests/handle_new_user_test.sh.
+# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# and signs in — no signup here, so this never touches the email
+# rate limit.
+#
+# Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
+# `bash supabase/tests/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/employee_sensitive_data_cross_org_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-PASSWORD="Passw0rd!23"
-EMAIL_A="xorg-sensitive-a-$(date +%s)@test.local"
-EMAIL_B="xorg-sensitive-b-$(date +%s)@test.local"
-signup "$EMAIL_A" "$PASSWORD" "Owner A" "XOrg Sensitive Org A" >/dev/null
-signup "$EMAIL_B" "$PASSWORD" "Owner B" "XOrg Sensitive Org B" >/dev/null
+PASSWORD="$TEST_USER_PASSWORD"
+EMAIL_A="stable-xorg-a@worklaw-test.test"
+EMAIL_B="stable-xorg-b@worklaw-test.test"
 
 TOKEN_A=$(json_field "$(signin "$EMAIL_A" "$PASSWORD")" "access_token")
 TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users"
+[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run provision_test_users.sh first?"
 
 ORG_A=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_A")")" "id")
 ORG_B=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_B")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN_A")")" "id")
 [ -n "$ORG_A" ] && [ -n "$ORG_B" ] && [ -n "$CDI_ID" ] || fail "setup: could not resolve org/CDI id"
 
-EMP_BODY="{\"organization_id\":\"$ORG_A\",\"employee_number\":\"EMP-XORG-1\",\"first_name\":\"Khadija\",\"last_name\":\"Ziani\",\"position\":\"Dev\",\"hire_date\":\"2021-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
+EMP_BODY="{\"organization_id\":\"$ORG_A\",\"employee_number\":\"EMP-XORG-$(date +%s)\",\"first_name\":\"Khadija\",\"last_name\":\"Ziani\",\"position\":\"Dev\",\"hire_date\":\"2021-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
 EMP_RESP=$(rest POST "employees" "$TOKEN_A" "$EMP_BODY")
 [ "$(rest_status "$EMP_RESP")" = "201" ] || fail "setup: org A could not create employee: $(rest_body "$EMP_RESP")"
 EMP_A_ID=$(json_field "$(rest_body "$EMP_RESP")" "id")

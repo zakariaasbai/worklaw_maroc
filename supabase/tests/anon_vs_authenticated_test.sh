@@ -12,25 +12,29 @@
 # this is a real, unauthenticated-equivalent REST call, not a SQL-level
 # policy inspection.
 #
-# Prerequisites: same as supabase/tests/handle_new_user_test.sh.
+# Uses a stable, pre-provisioned account (see provision_test_users.sh)
+# and signs in — no signup here, so this never touches the email
+# rate limit.
+#
+# Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
+# `bash supabase/tests/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/anon_vs_authenticated_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-PASSWORD="Passw0rd!23"
-EMAIL="anon-vs-auth-$(date +%s)@test.local"
-signup "$EMAIL" "$PASSWORD" "Anon Test User" "Anon Test Org" >/dev/null
+PASSWORD="$TEST_USER_PASSWORD"
+EMAIL="stable-anon@worklaw-test.test"
 
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
-[ -n "$TOKEN" ] || fail "could not sign in test user"
+[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run provision_test_users.sh first?"
 
 ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN")")" "id")
 [ -n "$ORG_ID" ] && [ -n "$CDI_ID" ] || fail "setup: could not resolve org/CDI id"
 
-EMP_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-ANON-1\",\"first_name\":\"Rania\",\"last_name\":\"Berrada\",\"position\":\"Dev\",\"hire_date\":\"2022-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
+EMP_BODY="{\"organization_id\":\"$ORG_ID\",\"employee_number\":\"EMP-ANON-$(date +%s)\",\"first_name\":\"Rania\",\"last_name\":\"Berrada\",\"position\":\"Dev\",\"hire_date\":\"2022-01-01\",\"contract_type_id\":\"$CDI_ID\",\"employment_type\":\"full_time\"}"
 EMP_RESP=$(rest POST "employees" "$TOKEN" "$EMP_BODY")
 [ "$(rest_status "$EMP_RESP")" = "201" ] || fail "setup: could not create employee: $(rest_body "$EMP_RESP")"
 EMP_ID=$(json_field "$(rest_body "$EMP_RESP")" "id")

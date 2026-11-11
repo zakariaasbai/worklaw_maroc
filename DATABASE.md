@@ -121,15 +121,31 @@ bash supabase/tests/employees_organization_immutability_test.sh
 
 Les autres nouveaux tests de l'audit (régression de statut, `verified_at` immuable, `calculation_runs` cross-org) sont intégrés directement dans `legal_rules_constraints_test.sh` et `calculation_runs_test.sh` ci-dessus plutôt que dans des fichiers séparés.
 
+## Comptes de test stables (évite la limite d'envoi d'emails)
+
+Presque tous les scripts de `supabase/tests/` utilisent désormais 14 comptes **fixes**, créés une fois via l'API admin (`email_confirm: true` — aucun email envoyé), plutôt qu'une inscription (`signup()`) à chaque exécution. Seul `handle_new_user_test.sh` continue à faire un vrai `signup()`, puisque c'est précisément ce qu'il teste.
+
+```bash
+bash supabase/tests/provision_test_users.sh
+```
+
+Demande la clé **service_role** (saisie masquée) et un mot de passe pour les 14 comptes (saisie masquée aussi — ce mot de passe n'est écrit nulle part, retenez-le, il faudra le ressaisir pour lancer les tests). La clé service_role est transmise à `curl` via un fichier de config temporaire (`-K`, permissions 600, supprimé par un `trap` à la sortie quoi qu'il arrive) plutôt qu'un `-H` en ligne de commande — un `-H` serait visible dans la liste des process (`ps`) pendant toute la durée de l'appel, un `-K` ne l'est pas. La liste des 14 identités vit dans `supabase/tests/_test_users.sh` (adresses `@worklaw-test.test` — le TLD `.test` est réservé IETF/ICANN, ne sera jamais un vrai domaine, voir RFC 2606).
+
+```bash
+bash supabase/tests/cleanup_test_users.sh
+```
+
+Supprime ces 14 comptes (et, par cascade, leurs organisations/employés/etc.) via l'API admin — demande une confirmation explicite (taper `DELETE`) avant toute suppression, puis la clé service_role (même mécanisme `-K`/`trap`).
+
 ## Lancer tous les tests d'un coup
 
 ```bash
 bash supabase/tests/run_all.sh
 ```
 
-Demande interactivement, dans l'ordre : `SUPABASE_ANON_KEY` (saisie visible, pas un secret — mais son format est validé : doit commencer par `eyJ` ou `sb_publishable_` et dépasser 40 caractères, sinon le script s'arrête avec un message clair plutôt que de laisser échouer les 10 tests), l'hôte du **Session Pooler** (ex. `aws-0-eu-west-3.pooler.supabase.com` — visible dans Project Settings → Database → Connection pooling → Session pooler), et le mot de passe DB (saisie masquée, `read -s`, percent-encodé dans l'URI). Aucun des deux secrets n'est jamais écrit dans un fichier ni affiché. **Ne jamais lancer ce script avec `bash -x`** — ça afficherait `SUPABASE_DB_URL`, qui contient le mot de passe.
+Demande interactivement, dans l'ordre : `SUPABASE_ANON_KEY` (saisie visible, pas un secret — format validé : doit commencer par `eyJ` ou `sb_publishable_` et dépasser 40 caractères), l'hôte du **Session Pooler** (ex. `aws-0-eu-west-3.pooler.supabase.com` — Project Settings → Database → Connection pooling), le mot de passe DB, et **le mot de passe des comptes de test** (celui choisi dans `provision_test_users.sh` — pas de fichier où le relire, il faut le ressaisir). Aucun de ces secrets n'est jamais écrit dans un fichier ni affiché. **Ne jamais lancer ce script avec `bash -x`** — ça afficherait `SUPABASE_DB_URL`, qui contient le mot de passe DB.
 
-Avant de lancer les 10 tests, le script fait un unique `select 1;` via le pooler pour vérifier la connexion — s'il échoue, il affiche la cause exacte et s'arrête immédiatement, plutôt que de laisser 10 tests échouer un par un pour la même raison. Le résumé final liste, pour chaque test en échec, la première ligne d'erreur pertinente (plus besoin de faire défiler toute la sortie pour comprendre pourquoi un test a échoué).
+Avant de lancer les tests, le script fait un unique `select 1;` via le pooler pour vérifier la connexion — s'il échoue, il affiche la cause exacte et s'arrête immédiatement. Le résumé final distingue PASS / FAIL / SKIP (un code de sortie 2 sans ligne `SKIP: ...` associée est recompté en FAIL — un skip doit toujours justifier sa raison), liste la première ligne pertinente pour chaque test en échec ou skippé, et renvoie un code de sortie non nul si aucun test n'a réellement réussi.
 
 ### Pourquoi le Session Pooler et pas la connexion directe
 
@@ -137,7 +153,7 @@ L'hôte de connexion directe (`db.<ref>.supabase.co`) est IPv6 uniquement sur de
 
 ### Limite d'envoi d'emails (HTTP 429 `over_email_send_rate_limit`)
 
-Chaque `signup()` dans les tests déclenche un email de confirmation réel (puisque **Confirm email reste activé**, volontairement — ne pas le désactiver). Le service d'envoi d'emails par défaut de Supabase (sans SMTP personnalisé) a une limite horaire très basse, vite atteinte en lançant toute la suite de tests. Recommandation : configurer un SMTP personnalisé côté dashboard (Authentication → Email → SMTP Settings) — ça lève la limite par défaut et c'est de toute façon nécessaire avant un lancement commercial (les emails de confirmation/réinitialisation ne doivent pas partir d'une adresse Supabase partagée pour de vrais clients). Une amélioration complémentaire possible côté tests : des comptes de test stables, confirmés une fois, avec connexion (`signin()`) plutôt que ré-inscription quand le compte existe déjà — à faire si la limite reste un problème même avec un SMTP personnalisé.
+Les comptes de test stables (ci-dessus) éliminent ce problème pour 9 des 10 scripts. `handle_new_user_test.sh` continue à faire un vrai `signup()` (**Confirm email reste activé**, volontairement — ne pas le désactiver) et peut donc toujours renvoyer un SKIP en cas de 429 — c'est attendu, pas un bug. Avant un lancement commercial, configurer un SMTP personnalisé (Authentication → Email → SMTP Settings) reste nécessaire de toute façon (voir `ROADMAP.md`).
 
 ## Arrêter Supabase local
 

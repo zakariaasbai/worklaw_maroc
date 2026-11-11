@@ -6,13 +6,26 @@ require_env() {
   : "${SUPABASE_URL:?Set SUPABASE_URL (see 'npx supabase status' or your project settings)}"
   : "${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY}"
   : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL}"
+  # Password for the stable test accounts created by
+  # provision_test_users.sh — never hardcoded, you chose it when you ran
+  # that script. Not needed by handle_new_user_test.sh, which doesn't
+  # source this file and signs up fresh, disposable accounts instead.
+  : "${TEST_USER_PASSWORD:?Set TEST_USER_PASSWORD (the password you chose in provision_test_users.sh)}"
 }
 
-pass() { echo "PASS: $1"; }
-fail() { echo "FAIL: $1"; exit 1; }
+# PASS/FAIL/SKIP go to stderr, not stdout — on purpose. Several tests
+# call functions like `signup ... >/dev/null` to discard a return value
+# they don't need; that redirection applies to everything the command
+# executes, including a nested skip()/fail() call inside it. Writing
+# these on stdout meant such a message was silently swallowed by the
+# caller's own `>/dev/null`, leaving a bare "exit 2, no message" behind.
+# stderr is never touched by that redirection, and run_all.sh's
+# `2>&1` still folds it back into what it captures either way.
+pass() { echo "PASS: $1" >&2; }
+fail() { echo "FAIL: $1" >&2; exit 1; }
 # Exit code 2 is reserved for "not a real result" — rate-limited, not
 # retried, and counted separately from pass/fail by run_all.sh.
-skip() { echo "SKIP: $1"; exit 2; }
+skip() { echo "SKIP: $1" >&2; exit 2; }
 
 # json_field '<json>' fieldName -> value (string/uuid fields only)
 #

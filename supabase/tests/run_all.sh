@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # Runs every integration test in supabase/tests/ against the remote
-# Supabase project, prompting for the two sensitive values interactively
-# so neither ever lands in a file or in shell history via an `export`
+# Supabase project, prompting for the sensitive values interactively so
+# none of them ever lands in a file or in shell history via an `export`
 # line typed into a terminal transcript.
 #
 # - SUPABASE_ANON_KEY is read visibly (it is not a secret — see
 #   DATABASE.md), but its format is validated before use.
-# - The DB password is read with `read -rs` (not echoed to the screen),
-#   percent-encoded into the connection URI, and never printed, logged,
-#   or written to disk. Do NOT run this script with `bash -x` — that
+# - The DB password and the stable test accounts' password are both
+#   read with `read -rs` (not echoed to the screen) and never printed,
+#   logged, or written to disk. The DB password is percent-encoded into
+#   the connection URI. Do NOT run this script with `bash -x` — that
 #   would print every expanded command, including SUPABASE_DB_URL.
+# - The stable test accounts' password is whatever you chose when you
+#   ran provision_test_users.sh — there's nowhere to read it back from.
 # - Uses the Session Pooler, not the direct `db.<ref>.supabase.co` host
 #   — that host is IPv6-only on many projects and unreachable from WSL2
 #   by default ("Network is unreachable"). See DATABASE.md.
@@ -34,10 +37,13 @@ read -r -p "Session Pooler host (e.g. aws-0-eu-west-3.pooler.supabase.com): " PO
 echo
 read -r -s -p "Supabase DB password (input hidden): " SUPABASE_DB_PASSWORD
 echo
+read -r -s -p "Stable test accounts password (from provision_test_users.sh, input hidden): " TEST_USER_PASSWORD
+echo
 
 [ -n "$SUPABASE_ANON_KEY" ] || { echo "Error: SUPABASE_ANON_KEY cannot be empty." >&2; exit 1; }
 [ -n "$POOLER_HOST" ] || { echo "Error: the pooler host cannot be empty." >&2; exit 1; }
 [ -n "$SUPABASE_DB_PASSWORD" ] || { echo "Error: the DB password cannot be empty." >&2; exit 1; }
+[ -n "$TEST_USER_PASSWORD" ] || { echo "Error: the test accounts password cannot be empty." >&2; exit 1; }
 
 # Sanity-check the anon/publishable key format before using it anywhere —
 # catches a pasted project ref, access token, or truncated key early
@@ -70,6 +76,7 @@ urlencode() {
 export SUPABASE_ANON_KEY
 export SUPABASE_DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:$(urlencode "$SUPABASE_DB_PASSWORD")@${POOLER_HOST}:5432/postgres"
 unset SUPABASE_DB_PASSWORD
+export TEST_USER_PASSWORD
 
 # Test the DB connection once, up front — if the pooler host/port is
 # wrong, or the network can't reach it, fail fast with the real cause
@@ -125,11 +132,21 @@ for test_file in ./*.sh; do
       passed=$((passed + 1))
       ;;
     2)
-      # Reserved exit code for "rate limited, not retried" — see
-      # skip() in _helpers.sh / handle_new_user_test.sh. Not a failure.
-      skipped=$((skipped + 1))
-      skipped_names+=("$base")
-      skipped_first_lines+=("$(first_marked_line "$output" "SKIP:")")
+      # Reserved exit code for "rate limited, not retried" — but a SKIP
+      # must always state why. If exit 2 happened without the test ever
+      # printing a "SKIP: ..." line, that's not a trustworthy skip (it
+      # could be any other silent death that happens to exit 2) — treat
+      # it as a failure instead of hiding it in the skip count.
+      skip_reason=$(printf '%s\n' "$output" | grep -m1 -i "SKIP:" || true)
+      if [ -n "$skip_reason" ]; then
+        skipped=$((skipped + 1))
+        skipped_names+=("$base")
+        skipped_first_lines+=("$skip_reason")
+      else
+        failed=$((failed + 1))
+        failed_names+=("$base")
+        failed_first_lines+=("exited with code 2 but printed no SKIP: reason — treated as a failure")
+      fi
       ;;
     *)
       failed=$((failed + 1))
@@ -153,5 +170,13 @@ if [ "$failed" -gt 0 ]; then
   for i in "${!failed_names[@]}"; do
     echo "  - ${failed_names[$i]}: ${failed_first_lines[$i]}"
   done
+fi
+# A run with zero real passes is not a successful run, even if nothing
+# was formally "failed" (e.g. everything got skipped) — don't let that
+# look like a clean exit.
+if [ "$failed" -gt 0 ] || [ "$passed" -eq 0 ]; then
+  if [ "$failed" -eq 0 ]; then
+    echo "No test actually passed (everything skipped) — treating this run as unsuccessful." >&2
+  fi
   exit 1
 fi

@@ -20,9 +20,20 @@ set -euo pipefail
 : "${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY (see 'npx supabase status')}"
 : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL (see 'npx supabase status')}"
 
-pass() { echo "PASS: $1"; }
-fail() { echo "FAIL: $1"; exit 1; }
-skip() { echo "SKIP: $1"; exit 2; }
+if ! command -v openssl >/dev/null 2>&1; then
+  echo "Error: 'openssl' is required but was not found on PATH." >&2
+  exit 1
+fi
+
+pass() { echo "PASS: $1" >&2; }
+fail() { echo "FAIL: $1" >&2; exit 1; }
+skip() { echo "SKIP: $1" >&2; exit 2; }
+
+# These accounts are disposable (created and abandoned within this one
+# run), so a fresh random password each time is simpler than the stable
+# accounts' password prompt elsewhere — never echoed, never written to
+# disk, held only in this variable for this process.
+TEST_PASSWORD=$(openssl rand -base64 18)
 
 signup() {
   local email="$1" full_name="$2" org_name="$3"
@@ -30,7 +41,7 @@ signup() {
     -X POST "$SUPABASE_URL/auth/v1/signup" \
     -H "apikey: $SUPABASE_ANON_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$email\",\"password\":\"Passw0rd!23\",\"data\":{\"full_name\":\"$full_name\",\"organization_name\":\"$org_name\"}}"
+    -d "{\"email\":\"$email\",\"password\":\"$TEST_PASSWORD\",\"data\":{\"full_name\":\"$full_name\",\"organization_name\":\"$org_name\"}}"
 }
 
 row_count() {
@@ -38,7 +49,7 @@ row_count() {
 }
 
 # --- Test 1: happy path creates profile + organization + owner membership ---
-EMAIL_OK="trigger-test-ok-$(date +%s)@test.local"
+EMAIL_OK="trigger-test-ok-$(date +%s)@worklaw-test.test"
 STATUS=$(signup "$EMAIL_OK" "Jane Doe" "Acme SARL")
 if [ "$STATUS" = "429" ]; then
   skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
@@ -59,7 +70,7 @@ MEMBER_COUNT=$(row_count "
 pass "happy path creates profile + organization + owner membership"
 
 # --- Test 2: missing organization_name must reject signup, no orphan rows ---
-EMAIL_BAD="trigger-test-bad-$(date +%s)@test.local"
+EMAIL_BAD="trigger-test-bad-$(date +%s)@worklaw-test.test"
 STATUS=$(signup "$EMAIL_BAD" "John Doe" "")
 if [ "$STATUS" = "429" ]; then
   skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
