@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Run this ONCE (or whenever you need to (re)create the suite's stable
 # test accounts) — creates every fixed test user used by
-# supabase/tests/*.sh via the Supabase Admin API, with email_confirm=true.
+# supabase/tests/*_test.sh via the Supabase Admin API, with
+# email_confirm=true.
 #
 # The admin "create user" endpoint does NOT send a confirmation email —
 # the account is marked confirmed directly — so running this never
@@ -11,23 +12,24 @@
 # these accounts instead of signing up a fresh one.
 #
 # Secrets handling:
-#   - service_role key: read with input hidden, held only in this
-#     process's memory. Passed to curl via a temporary `-K` config file
-#     (curl reads "header = ..." lines from it) instead of a command-line
-#     -H flag — a -H value is visible to any other process on the
-#     machine via `ps`/`/proc/<pid>/cmdline` for as long as curl runs; a
-#     -K file is not. The file is created 600 (owner-only), and a trap
-#     removes it on exit no matter how the script ends.
+#   - service_role / secret key: read with input hidden, held only in
+#     this process's memory. Passed to curl via a temporary `-K` config
+#     file (curl reads "header = ..." lines from it) instead of a
+#     command-line -H flag — a -H value is visible to any other process
+#     on the machine via `ps`/`/proc/<pid>/cmdline` for as long as curl
+#     runs; a -K file is not. The file is created 600 (owner-only), and
+#     a trap removes it on exit no matter how the script ends.
 #   - test user password: read with input hidden. This is the SAME
-#     password every supabase/tests/*.sh script will need later to sign
-#     in as these accounts — there's no file to read it back from (that
-#     would defeat the point), so remember what you type here.
+#     password every supabase/tests/*_test.sh script will need later to
+#     sign in as these accounts — there's no file to read it back from
+#     (that would defeat the point), so remember what you type here.
 #
 # Do NOT run this script with `bash -x`.
-# Run: bash supabase/tests/provision_test_users.sh
+# Run: bash supabase/tests/tools/provision_test_users.sh
 set -uo pipefail
 cd "$(dirname "$0")"
 source ./_test_users.sh
+source ./_admin_auth.sh
 
 SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
 SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
@@ -37,20 +39,23 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-read -r -s -p "Supabase service_role key (input hidden): " SERVICE_ROLE_KEY
+read -r -s -p "Supabase service_role / secret key (input hidden): " SERVICE_ROLE_KEY
 echo
+validate_admin_key_format "$SERVICE_ROLE_KEY" || exit 1
+
 read -r -s -p "Password to set for all stable test accounts (input hidden): " TEST_PASSWORD
 echo
-[ -n "$SERVICE_ROLE_KEY" ] || { echo "Error: the service_role key cannot be empty." >&2; exit 1; }
 [ -n "$TEST_PASSWORD" ] || { echo "Error: the test password cannot be empty." >&2; exit 1; }
 
 CURL_CONFIG=$(mktemp)
 chmod 600 "$CURL_CONFIG"
 trap 'rm -f "$CURL_CONFIG"' EXIT INT TERM
-{
-  printf 'header = "apikey: %s"\n' "$SERVICE_ROLE_KEY"
-  printf 'header = "Authorization: Bearer %s"\n' "$SERVICE_ROLE_KEY"
-} > "$CURL_CONFIG"
+write_admin_curl_config "$SERVICE_ROLE_KEY" "$CURL_CONFIG"
+
+echo "Verifying the admin key..."
+verify_admin_key "$SUPABASE_URL" "$CURL_CONFIG" || exit 1
+echo "Admin key OK."
+echo
 
 created=0
 already_existed=0

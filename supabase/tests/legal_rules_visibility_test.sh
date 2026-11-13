@@ -8,7 +8,7 @@
 # there is deliberately no client-side write path for legal_rules.
 #
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
-# `bash supabase/tests/provision_test_users.sh` run at least once.
+# `bash supabase/tests/tools/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/legal_rules_visibility_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -18,7 +18,7 @@ require_env
 PASSWORD="$TEST_USER_PASSWORD"
 EMAIL="stable-legalvis@worklaw-test.test"
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
-[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run provision_test_users.sh first?"
+[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run tools/provision_test_users.sh first?"
 PROFILE_ID=$(psql_scalar "select id from public.profiles where email = '$EMAIL';")
 [ -n "$PROFILE_ID" ] || fail "setup: could not resolve profile id"
 

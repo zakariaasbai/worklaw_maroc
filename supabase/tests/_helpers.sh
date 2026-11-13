@@ -7,10 +7,10 @@ require_env() {
   : "${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY}"
   : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL}"
   # Password for the stable test accounts created by
-  # provision_test_users.sh — never hardcoded, you chose it when you ran
+  # tools/provision_test_users.sh — never hardcoded, you chose it when you ran
   # that script. Not needed by handle_new_user_test.sh, which doesn't
   # source this file and signs up fresh, disposable accounts instead.
-  : "${TEST_USER_PASSWORD:?Set TEST_USER_PASSWORD (the password you chose in provision_test_users.sh)}"
+  : "${TEST_USER_PASSWORD:?Set TEST_USER_PASSWORD (the password you chose in tools/provision_test_users.sh)}"
 }
 
 # PASS/FAIL/SKIP go to stderr, not stdout — on purpose. Several tests

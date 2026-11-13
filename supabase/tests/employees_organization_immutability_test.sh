@@ -7,12 +7,12 @@
 # still works (the trigger targets organization_id specifically, not
 # every update).
 #
-# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# Uses stable, pre-provisioned accounts (see tools/provision_test_users.sh)
 # and signs in — no signup here, so this never touches the email
 # rate limit.
 #
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
-# `bash supabase/tests/provision_test_users.sh` run at least once.
+# `bash supabase/tests/tools/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/employees_organization_immutability_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -25,7 +25,7 @@ EMAIL_B="stable-orgimmut-b@worklaw-test.test"
 
 TOKEN_A=$(json_field "$(signin "$EMAIL_A" "$PASSWORD")" "access_token")
 TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run provision_test_users.sh first?"
+[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run tools/provision_test_users.sh first?"
 
 PROFILE_A=$(psql_scalar "select id from public.profiles where email = '$EMAIL_A';")
 ORG_A=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_A")")" "id")

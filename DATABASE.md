@@ -123,19 +123,25 @@ Les autres nouveaux tests de l'audit (régression de statut, `verified_at` immua
 
 ## Comptes de test stables (évite la limite d'envoi d'emails)
 
-Presque tous les scripts de `supabase/tests/` utilisent désormais 14 comptes **fixes**, créés une fois via l'API admin (`email_confirm: true` — aucun email envoyé), plutôt qu'une inscription (`signup()`) à chaque exécution. Seul `handle_new_user_test.sh` continue à faire un vrai `signup()`, puisque c'est précisément ce qu'il teste.
+Presque tous les scripts de `supabase/tests/*_test.sh` utilisent désormais 14 comptes **fixes**, créés une fois via l'API admin (`email_confirm: true` — aucun email envoyé), plutôt qu'une inscription (`signup()`) à chaque exécution. Seul `handle_new_user_test.sh` continue à faire un vrai `signup()`, puisque c'est précisément ce qu'il teste.
+
+Les scripts de provisioning/nettoyage vivent dans `supabase/tests/tools/` — un sous-dossier séparé, pas des `*_test.sh`, justement pour que `run_all.sh` (qui ne lance que `./*_test.sh`) ne puisse jamais les confondre avec un test.
 
 ```bash
-bash supabase/tests/provision_test_users.sh
+bash supabase/tests/tools/provision_test_users.sh
 ```
 
-Demande la clé **service_role** (saisie masquée) et un mot de passe pour les 14 comptes (saisie masquée aussi — ce mot de passe n'est écrit nulle part, retenez-le, il faudra le ressaisir pour lancer les tests). La clé service_role est transmise à `curl` via un fichier de config temporaire (`-K`, permissions 600, supprimé par un `trap` à la sortie quoi qu'il arrive) plutôt qu'un `-H` en ligne de commande — un `-H` serait visible dans la liste des process (`ps`) pendant toute la durée de l'appel, un `-K` ne l'est pas. La liste des 14 identités vit dans `supabase/tests/_test_users.sh` (adresses `@worklaw-test.test` — le TLD `.test` est réservé IETF/ICANN, ne sera jamais un vrai domaine, voir RFC 2606).
+Demande la clé **service_role/secret** (saisie masquée) et un mot de passe pour les 14 comptes (saisie masquée aussi — ce mot de passe n'est écrit nulle part, retenez-le, il faudra le ressaisir pour lancer les tests).
+
+**Format de clé** : Supabase a deux formats — l'ancien (un JWT, commence par `eyJ`) et le nouveau (`sb_secret_...`, pas un JWT). Le script détecte lequel vous avez saisi : avec le nouveau format, seul l'en-tête `apikey` est envoyé ; avec l'ancien, `apikey` **et** `Authorization: Bearer` sont envoyés (GoTrue vérifie le rôle encodé dans ce JWT). La clé **sb_publishable_** (ou `anon`) est explicitement refusée dès la saisie — elle n'a aucun droit admin, et l'utiliser produisait un 401 "Invalid API key". La clé est vérifiée une fois via un appel admin en lecture seule avant toute création, pour échouer immédiatement avec un message clair plutôt qu'après 14 tentatives.
+
+La clé est transmise à `curl` via un fichier de config temporaire (`-K`, permissions 600, supprimé par un `trap` à la sortie quoi qu'il arrive) plutôt qu'un `-H` en ligne de commande — un `-H` serait visible dans la liste des process (`ps`) pendant toute la durée de l'appel, un `-K` ne l'est pas. La liste des 14 identités vit dans `supabase/tests/tools/_test_users.sh` (adresses `@worklaw-test.test` — le TLD `.test` est réservé IETF/ICANN, ne sera jamais un vrai domaine, voir RFC 2606). La logique de clé partagée (format, en-têtes, vérification) vit dans `supabase/tests/tools/_admin_auth.sh`.
 
 ```bash
-bash supabase/tests/cleanup_test_users.sh
+bash supabase/tests/tools/cleanup_test_users.sh
 ```
 
-Supprime ces 14 comptes (et, par cascade, leurs organisations/employés/etc.) via l'API admin — demande une confirmation explicite (taper `DELETE`) avant toute suppression, puis la clé service_role (même mécanisme `-K`/`trap`).
+Supprime ces 14 comptes (et, par cascade, leurs organisations/employés/etc.) via l'API admin — demande une confirmation explicite (taper `DELETE`) avant toute suppression, puis la même vérification de clé que ci-dessus.
 
 ## Lancer tous les tests d'un coup
 
@@ -143,7 +149,7 @@ Supprime ces 14 comptes (et, par cascade, leurs organisations/employés/etc.) vi
 bash supabase/tests/run_all.sh
 ```
 
-Demande interactivement, dans l'ordre : `SUPABASE_ANON_KEY` (saisie visible, pas un secret — format validé : doit commencer par `eyJ` ou `sb_publishable_` et dépasser 40 caractères), l'hôte du **Session Pooler** (ex. `aws-0-eu-west-3.pooler.supabase.com` — Project Settings → Database → Connection pooling), le mot de passe DB, et **le mot de passe des comptes de test** (celui choisi dans `provision_test_users.sh` — pas de fichier où le relire, il faut le ressaisir). Aucun de ces secrets n'est jamais écrit dans un fichier ni affiché. **Ne jamais lancer ce script avec `bash -x`** — ça afficherait `SUPABASE_DB_URL`, qui contient le mot de passe DB.
+Demande interactivement, dans l'ordre : `SUPABASE_ANON_KEY` (saisie visible, pas un secret — format validé : doit commencer par `eyJ` ou `sb_publishable_` et dépasser 40 caractères), l'hôte du **Session Pooler** (ex. `aws-0-eu-west-3.pooler.supabase.com` — Project Settings → Database → Connection pooling), le mot de passe DB, et **le mot de passe des comptes de test** (celui choisi dans `tools/provision_test_users.sh` — pas de fichier où le relire, il faut le ressaisir). Aucun de ces secrets n'est jamais écrit dans un fichier ni affiché. **Ne jamais lancer ce script avec `bash -x`** — ça afficherait `SUPABASE_DB_URL`, qui contient le mot de passe DB.
 
 Avant de lancer les tests, le script fait un unique `select 1;` via le pooler pour vérifier la connexion — s'il échoue, il affiche la cause exacte et s'arrête immédiatement. Le résumé final distingue PASS / FAIL / SKIP (un code de sortie 2 sans ligne `SKIP: ...` associée est recompté en FAIL — un skip doit toujours justifier sa raison), liste la première ligne pertinente pour chaque test en échec ou skippé, et renvoie un code de sortie non nul si aucun test n'a réellement réussi.
 

@@ -12,12 +12,12 @@
 # this is a real, unauthenticated-equivalent REST call, not a SQL-level
 # policy inspection.
 #
-# Uses a stable, pre-provisioned account (see provision_test_users.sh)
+# Uses a stable, pre-provisioned account (see tools/provision_test_users.sh)
 # and signs in — no signup here, so this never touches the email
 # rate limit.
 #
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
-# `bash supabase/tests/provision_test_users.sh` run at least once.
+# `bash supabase/tests/tools/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/anon_vs_authenticated_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -28,7 +28,7 @@ PASSWORD="$TEST_USER_PASSWORD"
 EMAIL="stable-anon@worklaw-test.test"
 
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
-[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run provision_test_users.sh first?"
+[ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run tools/provision_test_users.sh first?"
 
 ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN")")" "id")

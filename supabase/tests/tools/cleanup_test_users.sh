@@ -3,15 +3,16 @@
 # via the Supabase Admin API. Destructive and irreversible — requires
 # typing an explicit confirmation phrase before anything is deleted.
 #
-# Same secret handling as provision_test_users.sh: service_role key read
-# with input hidden, passed to curl via a temporary 600 `-K` config file
-# removed on exit via trap, never a command-line -H value.
+# Same secret handling as provision_test_users.sh: service_role/secret
+# key read with input hidden, passed to curl via a temporary 600 `-K`
+# config file removed on exit via trap, never a command-line -H value.
 #
 # Do NOT run this script with `bash -x`.
-# Run: bash supabase/tests/cleanup_test_users.sh
+# Run: bash supabase/tests/tools/cleanup_test_users.sh
 set -uo pipefail
 cd "$(dirname "$0")"
 source ./_test_users.sh
+source ./_admin_auth.sh
 
 SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
 SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
@@ -37,17 +38,19 @@ if [ "$CONFIRMATION" != "DELETE" ]; then
   exit 1
 fi
 
-read -r -s -p "Supabase service_role key (input hidden): " SERVICE_ROLE_KEY
+read -r -s -p "Supabase service_role / secret key (input hidden): " SERVICE_ROLE_KEY
 echo
-[ -n "$SERVICE_ROLE_KEY" ] || { echo "Error: the service_role key cannot be empty." >&2; exit 1; }
+validate_admin_key_format "$SERVICE_ROLE_KEY" || exit 1
 
 CURL_CONFIG=$(mktemp)
 chmod 600 "$CURL_CONFIG"
 trap 'rm -f "$CURL_CONFIG"' EXIT INT TERM
-{
-  printf 'header = "apikey: %s"\n' "$SERVICE_ROLE_KEY"
-  printf 'header = "Authorization: Bearer %s"\n' "$SERVICE_ROLE_KEY"
-} > "$CURL_CONFIG"
+write_admin_curl_config "$SERVICE_ROLE_KEY" "$CURL_CONFIG"
+
+echo "Verifying the admin key..."
+verify_admin_key "$SUPABASE_URL" "$CURL_CONFIG" || exit 1
+echo "Admin key OK."
+echo
 
 deleted=0
 not_found=0

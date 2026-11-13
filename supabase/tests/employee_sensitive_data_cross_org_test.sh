@@ -11,12 +11,12 @@
 # corrective migration applied to see it fail (prove the bug), then
 # again after `npx supabase db push` to see it correctly rejected.
 #
-# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# Uses stable, pre-provisioned accounts (see tools/provision_test_users.sh)
 # and signs in — no signup here, so this never touches the email
 # rate limit.
 #
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
-# `bash supabase/tests/provision_test_users.sh` run at least once.
+# `bash supabase/tests/tools/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/employee_sensitive_data_cross_org_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -29,7 +29,7 @@ EMAIL_B="stable-xorg-b@worklaw-test.test"
 
 TOKEN_A=$(json_field "$(signin "$EMAIL_A" "$PASSWORD")" "access_token")
 TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run provision_test_users.sh first?"
+[ -n "$TOKEN_A" ] && [ -n "$TOKEN_B" ] || fail "could not sign in test users — run tools/provision_test_users.sh first?"
 
 ORG_A=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_A")")" "id")
 ORG_B=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_B")")" "id")

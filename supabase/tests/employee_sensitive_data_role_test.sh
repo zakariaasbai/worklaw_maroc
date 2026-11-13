@@ -11,12 +11,12 @@
 # member, exactly like the Flutter app would call it. That's the part that
 # actually proves the RLS behavior.
 #
-# Uses stable, pre-provisioned accounts (see provision_test_users.sh)
+# Uses stable, pre-provisioned accounts (see tools/provision_test_users.sh)
 # and signs in — no signup here, so this never touches the email
 # rate limit.
 #
 # Prerequisites: same as supabase/tests/handle_new_user_test.sh, plus
-# `bash supabase/tests/provision_test_users.sh` run at least once.
+# `bash supabase/tests/tools/provision_test_users.sh` run at least once.
 # Run: bash supabase/tests/employee_sensitive_data_role_test.sh
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -31,7 +31,7 @@ EMAIL_OWNER="stable-sensitive-owner@worklaw-test.test"
 EMAIL_MEMBER="stable-sensitive-member@worklaw-test.test"
 
 TOKEN_OWNER=$(json_field "$(signin "$EMAIL_OWNER" "$PASSWORD")" "access_token")
-[ -n "$TOKEN_OWNER" ] || fail "could not sign in as owner — run provision_test_users.sh first?"
+[ -n "$TOKEN_OWNER" ] || fail "could not sign in as owner — run tools/provision_test_users.sh first?"
 
 ORG_ID=$(json_field "$(rest_body "$(rest GET "organizations?select=id" "$TOKEN_OWNER")")" "id")
 CDI_ID=$(json_field "$(rest_body "$(rest GET "contract_types?code=eq.CDI&select=id" "$TOKEN_OWNER")")" "id")

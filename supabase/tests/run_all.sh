@@ -4,6 +4,13 @@
 # none of them ever lands in a file or in shell history via an `export`
 # line typed into a terminal transcript.
 #
+# Only runs files matching `*_test.sh` directly in this directory —
+# not `_helpers.sh`, not anything under tools/ (provisioning/cleanup
+# scripts), not this file. That's a naming convention, not an
+# exclusion list to maintain: any future non-test utility script just
+# needs to not be named `*_test.sh` (or to live under tools/) to stay
+# out of this loop automatically.
+#
 # - SUPABASE_ANON_KEY is read visibly (it is not a secret — see
 #   DATABASE.md), but its format is validated before use.
 # - The DB password and the stable test accounts' password are both
@@ -12,7 +19,8 @@
 #   the connection URI. Do NOT run this script with `bash -x` — that
 #   would print every expanded command, including SUPABASE_DB_URL.
 # - The stable test accounts' password is whatever you chose when you
-#   ran provision_test_users.sh — there's nowhere to read it back from.
+#   ran tools/provision_test_users.sh — there's nowhere to read it back
+#   from.
 # - Uses the Session Pooler, not the direct `db.<ref>.supabase.co` host
 #   — that host is IPv6-only on many projects and unreachable from WSL2
 #   by default ("Network is unreachable"). See DATABASE.md.
@@ -37,7 +45,7 @@ read -r -p "Session Pooler host (e.g. aws-0-eu-west-3.pooler.supabase.com): " PO
 echo
 read -r -s -p "Supabase DB password (input hidden): " SUPABASE_DB_PASSWORD
 echo
-read -r -s -p "Stable test accounts password (from provision_test_users.sh, input hidden): " TEST_USER_PASSWORD
+read -r -s -p "Stable test accounts password (from tools/provision_test_users.sh, input hidden): " TEST_USER_PASSWORD
 echo
 
 [ -n "$SUPABASE_ANON_KEY" ] || { echo "Error: SUPABASE_ANON_KEY cannot be empty." >&2; exit 1; }
@@ -118,10 +126,8 @@ first_marked_line() {
   printf '%s' "$line"
 }
 
-for test_file in ./*.sh; do
+for test_file in ./*_test.sh; do
   base="$(basename "$test_file")"
-  [ "$base" = "_helpers.sh" ] && continue
-  [ "$base" = "run_all.sh" ] && continue
 
   echo "=== Running $base ==="
   output=$(bash "$test_file" 2>&1)
