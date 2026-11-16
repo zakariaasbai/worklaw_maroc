@@ -6,11 +6,29 @@ require_env() {
   : "${SUPABASE_URL:?Set SUPABASE_URL (see 'npx supabase status' or your project settings)}"
   : "${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY}"
   : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL}"
+  # A real mailbox you control, e.g. prenom.nom@gmail.com. Supabase's own
+  # email-address validation rejects invented/reserved domains like
+  # @worklaw-test.test outright (error_code email_address_invalid), so the
+  # stable test accounts are plus-addressed variants of this one real
+  # address instead — see stable_email() below.
+  : "${TEST_EMAIL_BASE:?Set TEST_EMAIL_BASE (a real mailbox you control, e.g. prenom.nom@gmail.com)}"
   # Password for the stable test accounts created by
   # tools/provision_test_users.sh — never hardcoded, you chose it when you ran
   # that script. Not needed by handle_new_user_test.sh, which doesn't
   # source this file and signs up fresh, disposable accounts instead.
   : "${TEST_USER_PASSWORD:?Set TEST_USER_PASSWORD (the password you chose in tools/provision_test_users.sh)}"
+}
+
+# stable_email <suffix> -> prints the plus-addressed test account for that
+# suffix, e.g. TEST_EMAIL_BASE=prenom.nom@gmail.com + "stable-anon" ->
+# "prenom.nom+stable-anon@gmail.com". Most providers (Gmail, Outlook, ...)
+# deliver plus-addressed mail to the base inbox while still treating each
+# variant as a distinct address for signup/lookup — this is what lets the
+# 14 stable accounts share one real, deliverable mailbox instead of an
+# invented domain Supabase's validation rejects.
+stable_email() {
+  local suffix="$1"
+  printf '%s+%s@%s' "${TEST_EMAIL_BASE%@*}" "$suffix" "${TEST_EMAIL_BASE#*@}"
 }
 
 # PASS/FAIL/SKIP go to stderr, not stdout — on purpose. Several tests

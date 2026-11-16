@@ -11,16 +11,25 @@
 # Run: bash supabase/tests/tools/cleanup_test_users.sh
 set -uo pipefail
 cd "$(dirname "$0")"
-source ./_test_users.sh
-source ./_admin_auth.sh
-
-SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
-SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "Error: 'curl' is required but was not found on PATH." >&2
   exit 1
 fi
+
+# Not a secret — read visibly. Must be the same base address you gave
+# tools/provision_test_users.sh, since the accounts it resolves to are
+# plus-addressed variants of it (see _test_users.sh).
+read -r -p "Base email address the test accounts were derived from (e.g. prenom.nom@gmail.com): " TEST_EMAIL_BASE
+echo
+[[ "$TEST_EMAIL_BASE" == *@* ]] || { echo "Error: TEST_EMAIL_BASE must look like an email address (contain '@')." >&2; exit 1; }
+export TEST_EMAIL_BASE
+
+source ./_test_users.sh
+source ./_admin_auth.sh
+
+SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
+SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 
 echo "This will PERMANENTLY delete ${#TEST_USERS[@]} stable test accounts"
 echo "(and, via cascade, their organizations/employees/etc.) from:"

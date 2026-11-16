@@ -16,8 +16,8 @@ source ./_helpers.sh
 require_env
 
 PASSWORD="$TEST_USER_PASSWORD"
-EMAIL_A="stable-isolation-a@worklaw-test.test"
-EMAIL_B="stable-isolation-b@worklaw-test.test"
+EMAIL_A="$(stable_email "stable-isolation-a")"
+EMAIL_B="$(stable_email "stable-isolation-b")"
 
 TOKEN_A=$(json_field "$(signin "$EMAIL_A" "$PASSWORD")" "access_token")
 TOKEN_B=$(json_field "$(signin "$EMAIL_B" "$PASSWORD")" "access_token")

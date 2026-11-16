@@ -11,8 +11,9 @@
 # needs to not be named `*_test.sh` (or to live under tools/) to stay
 # out of this loop automatically.
 #
-# - SUPABASE_ANON_KEY is read visibly (it is not a secret — see
-#   DATABASE.md), but its format is validated before use.
+# - SUPABASE_ANON_KEY and TEST_EMAIL_BASE are read visibly (neither is a
+#   secret — see DATABASE.md); SUPABASE_ANON_KEY's format is validated
+#   before use.
 # - The DB password and the stable test accounts' password are both
 #   read with `read -rs` (not echoed to the screen) and never printed,
 #   logged, or written to disk. The DB password is percent-encoded into
@@ -47,11 +48,17 @@ read -r -s -p "Supabase DB password (input hidden): " SUPABASE_DB_PASSWORD
 echo
 read -r -s -p "Stable test accounts password (from tools/provision_test_users.sh, input hidden): " TEST_USER_PASSWORD
 echo
+# Not a secret — read visibly. Same base address given to
+# tools/provision_test_users.sh; stable_email() in _helpers.sh derives
+# each stable account's plus-addressed variant from it.
+read -r -p "Base email address the test accounts were derived from (e.g. prenom.nom@gmail.com): " TEST_EMAIL_BASE
+echo
 
 [ -n "$SUPABASE_ANON_KEY" ] || { echo "Error: SUPABASE_ANON_KEY cannot be empty." >&2; exit 1; }
 [ -n "$POOLER_HOST" ] || { echo "Error: the pooler host cannot be empty." >&2; exit 1; }
 [ -n "$SUPABASE_DB_PASSWORD" ] || { echo "Error: the DB password cannot be empty." >&2; exit 1; }
 [ -n "$TEST_USER_PASSWORD" ] || { echo "Error: the test accounts password cannot be empty." >&2; exit 1; }
+[[ "$TEST_EMAIL_BASE" == *@* ]] || { echo "Error: TEST_EMAIL_BASE must look like an email address (contain '@')." >&2; exit 1; }
 
 # Sanity-check the anon/publishable key format before using it anywhere —
 # catches a pasted project ref, access token, or truncated key early
@@ -85,6 +92,7 @@ export SUPABASE_ANON_KEY
 export SUPABASE_DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:$(urlencode "$SUPABASE_DB_PASSWORD")@${POOLER_HOST}:5432/postgres"
 unset SUPABASE_DB_PASSWORD
 export TEST_USER_PASSWORD
+export TEST_EMAIL_BASE
 
 # Test the DB connection once, up front — if the pooler host/port is
 # wrong, or the network can't reach it, fail fast with the real cause

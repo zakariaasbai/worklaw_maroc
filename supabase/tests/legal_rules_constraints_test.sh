@@ -48,7 +48,7 @@ SQL
 
 # --- Setup: a real, stable profile id to satisfy created_by/added_by FKs ---
 PASSWORD="$TEST_USER_PASSWORD"
-EMAIL="stable-legalrules@worklaw-test.test"
+EMAIL="$(stable_email "stable-legalrules")"
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
 [ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run tools/provision_test_users.sh first?"
 PROFILE_ID=$(psql_scalar "select id from public.profiles where email = '$EMAIL';")

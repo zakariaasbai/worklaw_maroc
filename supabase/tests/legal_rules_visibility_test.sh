@@ -16,7 +16,7 @@ source ./_helpers.sh
 require_env
 
 PASSWORD="$TEST_USER_PASSWORD"
-EMAIL="stable-legalvis@worklaw-test.test"
+EMAIL="$(stable_email "stable-legalvis")"
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
 [ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run tools/provision_test_users.sh first?"
 PROFILE_ID=$(psql_scalar "select id from public.profiles where email = '$EMAIL';")

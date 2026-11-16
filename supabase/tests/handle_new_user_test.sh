@@ -11,6 +11,10 @@
 #        export SUPABASE_URL=http://127.0.0.1:54321   # API URL
 #        export SUPABASE_ANON_KEY=...                 # anon public key
 #        export SUPABASE_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+#   3. export TEST_EMAIL_BASE=prenom.nom@gmail.com — a real mailbox you
+#      control. Supabase's own email validation rejects an invented
+#      domain, so the two disposable accounts below are plus-addressed
+#      variants of this one real address instead.
 #
 # Run: bash supabase/tests/handle_new_user_test.sh
 
@@ -19,6 +23,9 @@ set -euo pipefail
 : "${SUPABASE_URL:?Set SUPABASE_URL (see 'npx supabase status')}"
 : "${SUPABASE_ANON_KEY:?Set SUPABASE_ANON_KEY (see 'npx supabase status')}"
 : "${SUPABASE_DB_URL:?Set SUPABASE_DB_URL (see 'npx supabase status')}"
+: "${TEST_EMAIL_BASE:?Set TEST_EMAIL_BASE (a real mailbox you control, e.g. prenom.nom@gmail.com)}"
+EMAIL_LOCAL="${TEST_EMAIL_BASE%@*}"
+EMAIL_DOMAIN="${TEST_EMAIL_BASE#*@}"
 
 if ! command -v openssl >/dev/null 2>&1; then
   echo "Error: 'openssl' is required but was not found on PATH." >&2
@@ -49,7 +56,7 @@ row_count() {
 }
 
 # --- Test 1: happy path creates profile + organization + owner membership ---
-EMAIL_OK="trigger-test-ok-$(date +%s)@worklaw-test.test"
+EMAIL_OK="${EMAIL_LOCAL}+trigger-test-ok-$(date +%s)@${EMAIL_DOMAIN}"
 STATUS=$(signup "$EMAIL_OK" "Jane Doe" "Acme SARL")
 if [ "$STATUS" = "429" ]; then
   skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"
@@ -70,7 +77,7 @@ MEMBER_COUNT=$(row_count "
 pass "happy path creates profile + organization + owner membership"
 
 # --- Test 2: missing organization_name must reject signup, no orphan rows ---
-EMAIL_BAD="trigger-test-bad-$(date +%s)@worklaw-test.test"
+EMAIL_BAD="${EMAIL_LOCAL}+trigger-test-bad-$(date +%s)@${EMAIL_DOMAIN}"
 STATUS=$(signup "$EMAIL_BAD" "John Doe" "")
 if [ "$STATUS" = "429" ]; then
   skip "signup rate limited (HTTP 429 over_email_send_rate_limit) — not retried"

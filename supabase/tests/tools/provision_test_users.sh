@@ -28,16 +28,25 @@
 # Run: bash supabase/tests/tools/provision_test_users.sh
 set -uo pipefail
 cd "$(dirname "$0")"
-source ./_test_users.sh
-source ./_admin_auth.sh
-
-SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
-SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "Error: 'curl' is required but was not found on PATH." >&2
   exit 1
 fi
+
+# Not a secret — read visibly. A real mailbox you control; the 14
+# accounts below are plus-addressed variants of it (see _test_users.sh),
+# since Supabase's email validation rejects an invented domain.
+read -r -p "Base email address for the test accounts (e.g. prenom.nom@gmail.com): " TEST_EMAIL_BASE
+echo
+[[ "$TEST_EMAIL_BASE" == *@* ]] || { echo "Error: TEST_EMAIL_BASE must look like an email address (contain '@')." >&2; exit 1; }
+export TEST_EMAIL_BASE
+
+source ./_test_users.sh
+source ./_admin_auth.sh
+
+SUPABASE_PROJECT_REF="upraqzlgnhjssaxmkdeh"
+SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 
 read -r -s -p "Supabase service_role / secret key (input hidden): " SERVICE_ROLE_KEY
 echo
@@ -59,7 +68,6 @@ echo
 
 created=0
 already_existed=0
-failed=0
 
 for entry in "${TEST_USERS[@]}"; do
   IFS='|' read -r email full_name org_name <<< "$entry"
@@ -80,8 +88,13 @@ for entry in "${TEST_USERS[@]}"; do
         echo "Already exists: $email"
         already_existed=$((already_existed + 1))
       else
-        echo "FAILED ($status) for $email: $body" >&2
-        failed=$((failed + 1))
+        # Stop at the first real failure instead of repeating the same
+        # cause 14 times — e.g. a rejected email domain/format applies
+        # identically to every remaining account.
+        echo "Error: creating $email failed (HTTP $status): $body" >&2
+        echo "Stopping after the first failure; $created created, $already_existed already existed before this." >&2
+        unset SERVICE_ROLE_KEY TEST_PASSWORD
+        exit 1
       fi
       ;;
   esac
@@ -90,5 +103,4 @@ done
 unset SERVICE_ROLE_KEY TEST_PASSWORD
 
 echo
-echo "Summary: $created created, $already_existed already existed, $failed failed"
-[ "$failed" -eq 0 ] || exit 1
+echo "Summary: $created created, $already_existed already existed"

@@ -25,7 +25,7 @@ source ./_helpers.sh
 require_env
 
 PASSWORD="$TEST_USER_PASSWORD"
-EMAIL="stable-anon@worklaw-test.test"
+EMAIL="$(stable_email "stable-anon")"
 
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")
 [ -n "$TOKEN" ] || fail "could not sign in as $EMAIL — run tools/provision_test_users.sh first?"

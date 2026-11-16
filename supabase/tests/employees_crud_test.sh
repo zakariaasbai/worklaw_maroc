@@ -16,7 +16,7 @@ cd "$(dirname "$0")"
 source ./_helpers.sh
 require_env
 
-EMAIL="stable-crud@worklaw-test.test"
+EMAIL="$(stable_email "stable-crud")"
 PASSWORD="$TEST_USER_PASSWORD"
 
 TOKEN=$(json_field "$(signin "$EMAIL" "$PASSWORD")" "access_token")

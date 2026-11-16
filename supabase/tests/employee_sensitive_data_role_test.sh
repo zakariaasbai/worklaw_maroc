@@ -24,11 +24,11 @@ source ./_helpers.sh
 require_env
 
 PASSWORD="$TEST_USER_PASSWORD"
-EMAIL_OWNER="stable-sensitive-owner@worklaw-test.test"
+EMAIL_OWNER="$(stable_email "stable-sensitive-owner")"
 # This account owns its own separate organization (provisioned that way)
 # — irrelevant here, we only use its identity, then add it as 'member' of
 # EMAIL_OWNER's organization below.
-EMAIL_MEMBER="stable-sensitive-member@worklaw-test.test"
+EMAIL_MEMBER="$(stable_email "stable-sensitive-member")"
 
 TOKEN_OWNER=$(json_field "$(signin "$EMAIL_OWNER" "$PASSWORD")" "access_token")
 [ -n "$TOKEN_OWNER" ] || fail "could not sign in as owner — run tools/provision_test_users.sh first?"
