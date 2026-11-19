@@ -59,8 +59,13 @@ json_field() {
   grep -o "\"$2\":\"[^\"]*\"" <<< "$1" | head -1 | cut -d'"' -f4 || true
 }
 
+# ON_ERROR_STOP matters: without it, a SQL error inside the statement
+# still exits 0 (psql just prints the error to stderr and moves on),
+# so `set -e` never catches it and the caller's `VAR=$(psql_scalar ...)`
+# silently ends up empty instead of the script stopping with the real
+# cause.
 psql_scalar() {
-  psql "$SUPABASE_DB_URL" -t -A -c "$1"
+  psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -t -A -c "$1"
 }
 
 signup() {

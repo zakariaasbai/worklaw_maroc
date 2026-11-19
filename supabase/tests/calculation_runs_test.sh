@@ -46,13 +46,24 @@ EMP_ID=$(json_field "$(rest_body "$EMP_RESP")" "id")
 # never match more than one legal_sources row in the lookup below.
 RULE_KEY="calcrun_rule_$(date +%s)"
 SOURCE_TITLE="CalcRun fixture source $(date +%s)"
+# A single statement (one CTE, not two separate `psql -c` statements) on
+# purpose: when a semicolon-separated multi-statement string is sent to
+# -c, psql prints a result/command-tag line for EACH statement, not just
+# the last — the earlier, RETURNING-less `insert into legal_sources`
+# would have printed its own "INSERT 0 1" tag ahead of the id, and that
+# extra line (with its embedded newline) would silently corrupt RULE_ID,
+# which then breaks the JSON body built from it further down with a
+# confusing PGRST102 "Empty or invalid json", not an empty-variable error.
 RULE_ID=$(psql_scalar "
-  insert into public.legal_sources (title, reference, url_or_citation, added_by)
-  values ('$SOURCE_TITLE', 'Art. 7', 'https://example.test/7', '$PROFILE_A');
+  with src as (
+    insert into public.legal_sources (title, reference, url_or_citation, added_by)
+    values ('$SOURCE_TITLE', 'Art. 7', 'https://example.test/7', '$PROFILE_A')
+    returning id
+  )
   insert into public.legal_rules
     (rule_key, version, status, legal_source_id, effective_from, input_schema_version, rule_definition, created_by, verified_by, verified_at)
-  select '$RULE_KEY', 1, 'ACTIVE', ls.id, '2024-01-01', 'v1', '{}', '$PROFILE_A', '$PROFILE_A', now()
-  from public.legal_sources ls where ls.title = '$SOURCE_TITLE'
+  select '$RULE_KEY', 1, 'ACTIVE', src.id, '2024-01-01', 'v1', '{}', '$PROFILE_A', '$PROFILE_A', now()
+  from src
   returning id;
 ")
 [ -n "$RULE_ID" ] || fail "setup: could not create legal_rules fixture row"
